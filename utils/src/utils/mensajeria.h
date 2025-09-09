@@ -1,8 +1,11 @@
-#ifndef MENSAJERIA_H
-#define MENSAJERIA_H
+#ifndef MENSAJERIA_H_
+#define MENSAJERIA_H_
 
 #include <stdio.h>
 #include <sys/socket.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <netdb.h>
 
 
 /**

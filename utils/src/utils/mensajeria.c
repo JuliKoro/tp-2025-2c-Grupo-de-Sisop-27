@@ -1,11 +1,11 @@
-
+#include "mensajeria.h"
 
 
 int iniciar_servidor(const char* puerto){
     int socket_servidor; 
     struct addrinfo hints, *server_info;
 
-    memset(&hints, sizeof(hints));
+    memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET; //IPV4
     hints.ai_socktype = SOCK_STREAM; //TCP
     hints.ai_flags = AI_PASSIVE;
@@ -58,7 +58,6 @@ int crear_conexion(const char* ip, const char* puerto){
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET; //IPV4
     hints.ai_socktype = SOCK_STREAM; //TCP
-    hints.ai_flags = AI_PASSIVE;
 
     int err = getaddrinfo(ip, puerto, &hints, &server_info);
     if(err !=0){
