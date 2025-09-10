@@ -48,7 +48,7 @@ int iniciar_servidor(const char* puerto){
     freeaddrinfo(server_info);
 
     //log y return el socket
-    fprintf("Servidor escuchando en el puerto %s\n", puerto);
+    printf("Servidor escuchando en el puerto %s\n", puerto);
     return socket_servidor;
 }
 
@@ -82,7 +82,7 @@ int crear_conexion(const char* ip, const char* puerto){
         return -1;
     }
 
-    fprintf("Conectado con exito a %s puerto %s\n", ip, puerto);
+    printf("Conectado con exito a %s puerto %s\n", ip, puerto);
     freeaddrinfo(server_info);
     return socket_cliente;
 }
@@ -93,6 +93,6 @@ int esperar_cliente(int socket_servidor){
         fprintf(stderr, "Error en el accept(): %s\n", strerror(errno));
         return -1;
     }
-    fprintf("Enhorabuena!!! Se conecto un cliente.");
+    printf("Enhorabuena!!! Se conecto un cliente.");
     return socket_cliente;
 }
