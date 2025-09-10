@@ -1,11 +1,16 @@
 #ifndef MENSAJERIA_H_
 #define MENSAJERIA_H_
 
-#include <stdio.h>
+#define _GNU_SOURCE
+
 #include <sys/socket.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <string.h>
 
 
 /**
