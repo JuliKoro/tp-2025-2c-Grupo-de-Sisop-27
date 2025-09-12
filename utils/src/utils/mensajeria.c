@@ -1,5 +1,8 @@
 #include "mensajeria.h"
 
+/***********************************************************************************************************************/
+/***                                                    SOCKETS                                                      ***/
+/***********************************************************************************************************************/
 
 int iniciar_servidor(const char* puerto){
     int socket_servidor; 
@@ -20,7 +23,6 @@ int iniciar_servidor(const char* puerto){
                             server_info->ai_protocol);
     if(socket_servidor == -1){
         fprintf(stderr, "Error al crear el socket: %s\n", strerror(errno));
-        close(socket_servidor);
         freeaddrinfo(server_info);
         return -1;
     }             
@@ -61,7 +63,8 @@ int crear_conexion(const char* ip, const char* puerto){
 
     int err = getaddrinfo(ip, puerto, &hints, &server_info);
     if(err !=0){
-        fprintf(stderr, "Fallo getaddrinfo al conectar con %s:%s - %s\n", ip, puerto, gai_strerror(err));  
+        fprintf(stderr, "Fallo getaddrinfo al conectar con %s:%s - %s\n", ip, puerto, gai_strerror(err));
+        return -1;
     }
 
     //creo socket
@@ -93,6 +96,242 @@ int esperar_cliente(int socket_servidor){
         fprintf(stderr, "Error en el accept(): %s\n", strerror(errno));
         return -1;
     }
-    printf("Enhorabuena!!! Se conecto un cliente.");
+    printf("Se conecto un cliente al socket %d\n", socket_servidor);
     return socket_cliente;
+}
+
+int enviar_string(int socket, char* string){
+    if (string == NULL){
+        fprintf(stderr, "Error: el string es NULL\n");
+        return -1;
+    }
+    int size = strlen(string) +1;
+
+    if(send(socket, &size, sizeof(size), 0) == -1){
+        fprintf(stderr, "Error al enviar el tamaño del string a traves del socket %d: %s\n", socket, strerror(errno));
+        return -1;
+    }
+    if (send(socket, string, size, 0) == -1){
+        fprintf(stderr, "Error al enviar el string a traves del socket %d: %s\n", socket, strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+char* recibir_string(int socket){
+    int size;
+    int bytes_recibidos;
+
+    //Recibo tamaño del string, chequeo errores
+    bytes_recibidos = recv(socket, &size, sizeof(size), MSG_WAITALL);
+    if(bytes_recibidos <= 0){
+        if(bytes_recibidos == -1){
+            fprintf(stderr, "Error al recibir el tamaño del string: %s\n", strerror(errno));
+            return NULL;
+        }
+        return NULL;
+    }
+    //Reservo espacio para recibir el string
+    char* string = malloc(size);
+    if(string == NULL){
+        fprintf(stderr, "Error al reservar memoria para el string: %s\n", strerror(errno));
+        return NULL;
+    }
+    
+    //Recibo el string, chequeo errores
+    bytes_recibidos = recv(socket, string, size, MSG_WAITALL);
+    if(bytes_recibidos <= 0){
+        if(bytes_recibidos == -1){
+            fprintf(stderr, "Error al recibir el string: %s\n", strerror(errno));
+            return NULL;
+        }
+        free(string);
+        return NULL;
+    }
+
+    string[size - 1] = '\0';
+    return string;
+}
+
+/***********************************************************************************************************************/
+/***                                           FUNCIONES DE MANEJO DE BUFFER                                         ***/
+/***********************************************************************************************************************/
+
+t_buffer *crear_buffer(uint32_t size){
+    t_buffer *buffer = malloc(sizeof(*buffer));
+    buffer->size = size;
+    buffer->offset = 0;
+    buffer->stream = malloc(size); //Se libera con destruir_buffer
+    return buffer;
+}
+
+void destruir_buffer(t_buffer *buffer){
+    if(buffer){
+        free(buffer->stream);
+        free(buffer);
+    }
+}
+
+void buffer_add(t_buffer *buffer, void *data, uint32_t size){
+    if(buffer->offset + size > buffer->size){
+        fprintf(stderr, "Buffer overflow: El buffer no tiene espacio para agregar los datos\n");
+        return;
+    }
+    memcpy(buffer->stream + buffer->offset, data, size);
+    buffer->offset += size;
+}
+
+void buffer_read(t_buffer *buffer, void *data, uint32_t size){
+    memcpy(data, buffer->stream + buffer->offset, size);
+    buffer->offset += size;
+}
+
+void buffer_add_uint32(t_buffer *buffer, uint32_t data){
+    buffer_add(buffer, &data, sizeof(data));
+}
+
+uint32_t buffer_read_uint32(t_buffer *buffer){
+    uint32_t data;
+    buffer_read(buffer, &data, sizeof(data));
+    return data;
+}
+
+void buffer_add_uint8(t_buffer *buffer, uint8_t data){
+    buffer_add(buffer, &data, sizeof(data));
+}
+
+uint8_t buffer_read_uint8(t_buffer *buffer){
+    uint8_t data;
+    buffer_read(buffer, &data, sizeof(data));
+    return data;
+}
+
+void buffer_add_string(t_buffer *buffer, uint32_t length, char* string){
+    buffer_add_uint32(buffer, length);
+    buffer_add(buffer, string, length);
+}
+
+char *buffer_read_string(t_buffer *buffer){
+    uint32_t length = buffer_read_uint32(buffer);
+    char *string = malloc(length + 1); //Hay que liberar
+    buffer_read(buffer, string, length);
+    string[length] = '\0';
+    return string;
+}
+
+/***********************************************************************************************************************/
+/***                                           FUNCIONES DE MANEJO DE PAQUETES                                       ***/
+/***********************************************************************************************************************/
+
+void* armar_stream(t_paquete *paquete){
+    void* stream = malloc(paquete->datos->size + sizeof(e_codigo_operacion) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(stream + offset, &(paquete->codigo_operacion), sizeof(e_codigo_operacion));
+    offset += sizeof(e_codigo_operacion);
+
+    memcpy(stream +  offset, &(paquete->datos->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(stream + offset, paquete->datos->stream, paquete->datos->size);
+
+    return stream;
+
+}
+
+int enviar_paquete(int socket, t_paquete *paquete){
+    // Armo el stream de bytes a partir del paquete que se recibio
+    void* stream = armar_stream(paquete);
+    //Envio el stream de bytes a traves del socket
+    if (send(socket, stream, paquete->datos->size + sizeof(e_codigo_operacion) + sizeof(uint32_t), 0) == -1){
+        fprintf(stderr, "Error al enviar el paquete a traves del socket %d: %s\n", socket, strerror(errno));
+        destruir_paquete(paquete);
+        return -1;
+    }
+    //Libero el paquete si el envio fue exitoso
+    destruir_paquete(paquete);
+    //Libero el stream de bytes usado para el envio
+    free(stream);
+    return 0;
+}
+
+t_paquete* recibir_paquete(int socket){
+    t_paquete* paquete = malloc(sizeof(*paquete));
+    if (paquete == NULL){
+        fprintf(stderr, "Error al reservar memoria para el paquete: %s\n", strerror(errno));
+        return NULL;
+    }
+    paquete->datos = malloc(sizeof(*paquete->datos));
+    if(paquete->datos == NULL){
+        fprintf(stderr, "Error al reservar memoria para el buffer del paquete: %s\n", strerror(errno));
+        free(paquete);
+        return NULL;
+    }
+    
+    //Recibo el codigo de operacion primero
+    if(recv(socket, &(paquete->codigo_operacion), sizeof(e_codigo_operacion), MSG_WAITALL) <=0){
+        // Si falla la recepcion, libero el paquete y devuelvo NULL
+        fprintf(stderr, "Error al recibir el codigo de operacion: %s\n", strerror(errno));
+        destruir_paquete(paquete);
+        return NULL;
+    }
+
+    //Recibo el tamaño del buffer
+    if(recv(socket, &(paquete->datos->size), sizeof(uint32_t), MSG_WAITALL) <=0){
+        // Si falla la recepcion, libero el paquete y devuelvo NULL
+        fprintf(stderr, "Error al recibir el tamaño del buffer del paquete: %s\n", strerror(errno));
+        destruir_paquete(paquete);
+        return NULL;
+    }
+
+    //Recibo el contenido del buffer si es que hay
+    if (paquete->datos->size > 0){
+        paquete->datos->stream = malloc(paquete->datos->size);
+        if(paquete->datos->stream == NULL){
+            //Si falla la reserva, libero el paquete y devuelvo NULL
+            fprintf(stderr, "Error al reservar memoria para el contenido del buffer del paquete: %s\n", strerror(errno));
+            destruir_paquete(paquete);
+            return NULL;
+        }
+        if(recv(socket, paquete->datos->stream, paquete->datos->size, MSG_WAITALL) <=0){
+            fprintf(stderr, "Error al recibir el contenido del buffer del paquete: %s\n", strerror(errno));
+            destruir_paquete(paquete);
+            return NULL;
+        }
+    } else {
+        paquete->datos->stream = NULL;
+    }
+    paquete->datos->offset = 0;
+    return paquete;
+}
+
+void destruir_paquete(t_paquete *paquete){
+    if(paquete){
+        destruir_buffer(paquete->datos);
+        free(paquete);
+    }
+}
+
+/***********************************************************************************************************************/
+/***                                           FUNCIONES DE SERIALIZACION DE PAQUETES                                ***/
+/***********************************************************************************************************************/
+
+t_buffer* serializar_handshake_qc_master(t_handshake_qc_master *handshake){
+    // Calculo el tamaño del buffer necesario. Tamaño del tamaño del string + tamaño del int + el string
+    uint32_t tamanio_buffer = sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + strlen(handshake->archivo_configuracion);
+    //Creo el buffer
+    t_buffer* buffer = crear_buffer(tamanio_buffer);
+    //Agrego los datos
+    buffer_add_uint32(buffer, strlen(handshake->archivo_configuracion));
+    buffer_add_uint32(buffer, handshake->prioridad);
+    //Agrego el string
+    buffer_add_string(buffer, strlen(handshake->archivo_configuracion), handshake->archivo_configuracion);
+    return buffer;
+}
+
+t_handshake_qc_master* deserializar_handshake_qc_master(t_buffer *buffer){
+    t_handshake_qc_master* handshake = malloc(sizeof(*handshake));
+    buffer_read_uint32(buffer);
+    handshake->prioridad = buffer_read_uint32(buffer);
+    handshake->archivo_configuracion = buffer_read_string(buffer);
+    return handshake;
 }
