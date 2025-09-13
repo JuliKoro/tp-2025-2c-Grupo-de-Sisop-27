@@ -337,33 +337,27 @@ t_handshake_qc_master* deserializar_handshake_qc_master(t_buffer *buffer){
 }
 
 t_buffer* serializar_handshake_worker_storage(t_handshake_worker_storage *handshake){
-    uint32_t tamanio_buffer = strlen(handshake->id_worker);
+    uint32_t tamanio_buffer = sizeof(uint32_t);
     t_buffer* buffer = crear_buffer(tamanio_buffer);
-    buffer_add_uint32(buffer, strlen(handshake->id_worker));
-    buffer_add_uint32(buffer, strlen(handshake->id_worker));
-    buffer_add_string(buffer, strlen(handshake->id_worker), handshake->id_worker);
+    buffer_add_uint32(buffer, handshake->id_worker);
     return buffer;
 }
 
 t_handshake_worker_storage* deserializar_handshake_worker_storage(t_buffer *buffer){
     t_handshake_worker_storage* handshake = malloc(sizeof(*handshake));
-    buffer_read_uint32(buffer);
-    handshake->id_worker = buffer_read_string(buffer);
+    handshake->id_worker = buffer_read_uint32(buffer);
     return handshake;
 }
 
 t_buffer* serializar_handshake_worker_master(t_handshake_worker_master *handshake){
-    uint32_t tamanio_buffer = strlen(handshake->id_worker);
+    uint32_t tamanio_buffer = sizeof(uint32_t);
     t_buffer* buffer = crear_buffer(tamanio_buffer);
-    buffer_add_uint32(buffer, strlen(handshake->id_worker));
-    buffer_add_uint32(buffer, strlen(handshake->id_worker));
-    buffer_add_string(buffer, strlen(handshake->id_worker), handshake->id_worker);
+    buffer_add_uint32(buffer, handshake->id_worker);
     return buffer;
 }
 
 t_handshake_worker_master* deserializar_handshake_worker_master(t_buffer *buffer){
     t_handshake_worker_master* handshake = malloc(sizeof(*handshake));
-    buffer_read_uint32(buffer);
-    handshake->id_worker = buffer_read_string(buffer);
+    handshake->id_worker = buffer_read_uint32(buffer);
     return handshake;
 }

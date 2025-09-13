@@ -33,15 +33,15 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    t_handshake_qc_master* handshake = generarHandshake();
+    t_handshake_qc_master* handshake = generarHandshake(nombre_archivo_configuracion, prioridad);
 
     t_paquete* paquete = generarPaquete(handshake);
 
     enviar_paquete(conexion_master, paquete);
 
-    char* confirmacion = confirmarRecepcion(conexion_master);
+    confirmarRecepcion(conexion_master);
     
-    limpiarMemoria(confirmacion, handshake);
+    limpiarMemoria(handshake);
 
     return 0;
 }

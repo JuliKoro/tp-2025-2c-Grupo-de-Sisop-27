@@ -1,6 +1,9 @@
 {
     "files.associations": {
         "cstdlib": "c",
-        "configs.h": "c"
+        "configs.h": "c",
+        "mensajeria.h": "c",
+        "hello.h": "c",
+        "qc_funciones.h": "c"
     }
 }

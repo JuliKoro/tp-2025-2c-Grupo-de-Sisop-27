@@ -1,13 +1,12 @@
 #include <utils/hello.h>
 #include <utils/configs.h>
 #include <utils/mensajeria.h>
-
-void atender_worker(t_buffer*);
+#include "conexion.h"
 
 int main(int argc, char* argv[]) {
     saludar("master");
 
-    storage_conf* storage_conf = get_configs_storage("storage.config")
+    storage_conf* storage_conf = get_configs_storage("storage.config");
     printf("PUERTO_ESCUCHA: %d\n", storage_conf->puerto_escucha);
     printf("PUNTO_MONTAJE: %s\n", storage_conf->punto_montaje);
     printf("LOG_LEVEL: %s\n", storage_conf->log_level);
@@ -37,27 +36,19 @@ int main(int argc, char* argv[]) {
         }
 
         switch(paquete->codigo_operacion) {
+            t_thread_args* thread_args;
             case HANDSHAKE_WORKER_STORAGE:
-                pthread_create(&thread, NULL, (void*) atender_worker(paquete->datos), fd_conexion_ptr);
+                thread_args = malloc(sizeof(t_thread_args));
+                thread_args->paquete = paquete;
+                thread_args->fd_conexion = fd_conexion_ptr;
+                pthread_create(&thread, NULL, atender_worker, (void*) thread_args);
                 pthread_detach(thread);
                 break;
-            case default:
-                fprintf(stderr, "Error: el paquete no es de tipo HANDSHAKE_QC_MASTER\n");
+            default:
+                fprintf(stderr, "Error: el paquete no es de tipo HANDSHAKE_<MODULO>_MASTER\n");
                 destruir_paquete(paquete);
                 return EXIT_FAILURE;
         }
     }
     return 0;
-}
-
-
-void atender_worker(t_buffer* datos) {
-    t_handshake_worker_master* handshake = deserializar_handshake_worker_master(datos);
-    printf("ID WORKER: %s\n", handshake->id_worker);
-
-    enviar_string(conexion_query_control, "Storage dice: Handshake recibido");
-
-    destruir_paquete(paquete);
-    free(handshake->id_worker);
-    free(handshake);
 }

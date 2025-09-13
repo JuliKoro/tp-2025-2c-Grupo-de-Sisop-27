@@ -183,6 +183,35 @@ t_buffer* serializar_handshake_qc_master(t_handshake_qc_master *handshake);
 */
 t_handshake_qc_master* deserializar_handshake_qc_master(t_buffer *buffer);
 
+
+/**
+* @brief Serializa un t_handshake_worker_storage
+* @param handshake el *t_handshake_worker_storage a serializar
+* @return el *t_buffer resultante
+*/
+t_buffer* serializar_handshake_worker_storage(t_handshake_worker_storage *handshake);
+
+/**
+* @brief Deserializa un t_handshake_worker_storage
+* @param buffer el *t_buffer a deserializar
+* @return el *t_handshake_worker_storage resultante. La estructura debe ser liberada por el que la recibe
+*/
+t_handshake_worker_storage* deserializar_handshake_worker_storage(t_buffer *buffer);
+
+/**
+* @brief Serializa un t_handshake_worker_master
+* @param handshake el *t_handshake_worker_master a serializar
+* @return el *t_buffer resultante
+*/
+t_buffer* serializar_handshake_worker_master(t_handshake_worker_master *handshake);
+
+/**
+* @brief Deserializa un t_handshake_worker_master
+* @param buffer el *t_buffer a deserializar
+* @return el *t_handshake_worker_master resultante. La estructura debe ser liberada por el que la recibe
+*/
+t_handshake_worker_master* deserializar_handshake_worker_master(t_buffer *buffer);
+
 #endif
  
 

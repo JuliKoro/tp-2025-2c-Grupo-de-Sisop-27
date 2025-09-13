@@ -8,26 +8,28 @@
 int main(int argc, char* argv[]) {
     saludar("worker");
 
+    
     if(argc < 3){
-        fprintf(stderr, "Error al iniciar modulo worker.\n");
+        fprintf(stderr, "Uso: %s <nombre_archivo_configuracion> <id_worker>\n", argv[0]);
         return EXIT_FAILURE;
     }
 
     char* nombre_config = argv[1];
-    char* id_worker = argv[2];
-
-    char* confirmacion = malloc(sizeof(char));
-
+    uint32_t id_worker = atoi(argv[2]);
 
     worker_conf* worker_conf = get_configs_worker(nombre_config);
+    char puerto_storage[10];
+    char puerto_master[10];
+    sprintf(puerto_storage, "%d", worker_conf->puerto_storage);
+    sprintf(puerto_master, "%d", worker_conf->puerto_master);
 
-    printf("WORKER INICIALIZADO: %s", id_worker);
-
+    printf("WORKER INICIALIZADO: %d \n", id_worker);
+ 
     
 
     // Conectar con Storage.
-    int conexion_storage = crear_conexion(worker_conf->ip_storage, worker_conf->puerto_master);
-    if(conexion_master == -1){
+    int conexion_storage = crear_conexion(worker_conf->ip_storage, puerto_storage);
+    if(conexion_storage == -1){
         fprintf(stderr, "Error al conectar con el modulo storage.\n");
         return EXIT_FAILURE;
     }
@@ -38,25 +40,25 @@ int main(int argc, char* argv[]) {
     
     enviar_paquete(conexion_storage, paquete);
 
-    confirmacion = confirmarRecepcion(conexion_storage);
+    confirmarRecepcion(conexion_storage);
     
-    limpiarMemoriaStorage(confirmacion, handshakeStorage);
+    limpiarMemoriaStorage(handshakeStorage);
 
     // Conectar con Master.
-    int conexion_master = crear_conexion(worker_conf->ip_storage, worker_conf->puerto_master);
+    int conexion_master = crear_conexion(worker_conf->ip_master, puerto_master);
     if(conexion_master == -1){
         fprintf(stderr, "Error al conectar con el modulo storage.\n");
         return EXIT_FAILURE;
     }
-    t_handshake_worker_master* handshakeMaster = generarHandshake(id_worker);
+    t_handshake_worker_master* handshakeMaster = generarHandshakeMaster(id_worker);
 
-    t_paquete* paquete = generarPaqueteMaster(HANDSHAKE_WORKER_STORAGE, handshakeMaster);
+    paquete = generarPaqueteMaster(HANDSHAKE_WORKER_MASTER, handshakeMaster);
     
     enviar_paquete(conexion_master, paquete);
 
-    confirmacion = confirmarRecepcion(conexion_master);
+    confirmarRecepcion(conexion_master);
     
-    limpiarMemoriaMaster(confirmacion, handshakeMaster);
+    limpiarMemoriaMaster(handshakeMaster);
 
     
 

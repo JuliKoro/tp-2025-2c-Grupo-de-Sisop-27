@@ -45,6 +45,16 @@ typedef struct {
 /***********************************************************************************************************************/
 
 /**
+ * @brief Estructura para los argumentos de las funciones de atencion de conexiones. 
+ * @param paquete el paquete handshake recibido
+ * @param fd_conexion el fd del socket de conexion con el modulo
+ */
+typedef struct {
+    t_paquete* paquete;
+    int* fd_conexion;
+} t_thread_args;
+
+/**
 * @brief Estructura para el handshake entre query control y master
 * @param archivo_configuracion el nombre del archivo de configuracion - char*
 * @param prioridad la prioridad de la query - int
@@ -54,12 +64,20 @@ typedef struct {
     uint32_t prioridad;
 } t_handshake_qc_master;
 
+/**
+ * @brief Estructura para el handshake entre worker y storage
+ * @param id_worker el id del worker - uint32_t
+ */
 typedef struct {
-    char* id_worker;
+    uint32_t id_worker;
 } t_handshake_worker_storage;
 
+/**
+ * @brief Estructura para el handshake entre worker y master
+ * @param id_worker el id del worker - uint32_t
+ */
 typedef struct {
-    char* id_worker;
+    uint32_t id_worker;
 } t_handshake_worker_master;
 
 

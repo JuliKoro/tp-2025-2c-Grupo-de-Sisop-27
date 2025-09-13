@@ -36,16 +36,23 @@ int main(int argc, char* argv[]) {
         }
 
         switch(paquete->codigo_operacion) {
+            t_thread_args* thread_args;
             case HANDSHAKE_QC_MASTER:
-                pthread_create(&thread, NULL, (void*) atender_query_control(paquete->datos), fd_conexion_ptr);
+                thread_args = malloc(sizeof(t_thread_args));
+                thread_args->paquete = paquete;
+                thread_args->fd_conexion = fd_conexion_ptr;
+                pthread_create(&thread, NULL, atender_query_control, (void*) thread_args);
                 pthread_detach(thread);
                 break;
             case HANDSHAKE_WORKER_MASTER:
-                pthread_create(&thread, NULL, (void*) atender_worker(paquete->datos), fd_conexion_ptr);
+                thread_args = malloc(sizeof(t_thread_args));
+                thread_args->paquete = paquete;
+                thread_args->fd_conexion = fd_conexion_ptr;
+                pthread_create(&thread, NULL, atender_worker, (void*) thread_args);
                 pthread_detach(thread);
                 break;
-            case default:
-                fprintf(stderr, "Error: el paquete no es de tipo HANDSHAKE_QC_MASTER\n");
+            default:
+                fprintf(stderr, "Error: el paquete no es de tipo HANDSHAKE_<MODULO>_MASTER\n");
                 destruir_paquete(paquete);
                 return EXIT_FAILURE;
         }
