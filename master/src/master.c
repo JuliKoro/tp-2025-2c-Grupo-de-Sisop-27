@@ -22,6 +22,17 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Error al iniciar el servidor\n");
         return EXIT_FAILURE;
     }
+
+    while (1) {
+        pthread_t thread;
+        int *fd_conexion_ptr = malloc(sizeof(int));
+        *fd_conexion_ptr = esperar_cliente(socket_servidor);
+        
+        pthread_create(&thread, NULL, (void*) atender_cliente, fd_conexion_ptr);
+        pthread_detach(thread);
+    }
+
+    
     int conexion_query_control = esperar_cliente(socket_servidor);
     if(conexion_query_control == -1){
         fprintf(stderr, "Error al esperar cliente\n");
