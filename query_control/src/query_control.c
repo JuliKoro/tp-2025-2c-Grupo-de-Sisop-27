@@ -1,16 +1,14 @@
 #include <utils/hello.h>
 #include <utils/configs.h>
 #include <utils/mensajeria.h>
+#include "qc_funciones.h"
 
-t_paquete* generarPaquete(void);
-t_handshake_qc_master* generarHandshake(void);
-void confirmarRecepcion (int);
-void limpiarMemoria(char*, t_handshake_qc_master*);
+
 
 int main(int argc, char* argv[]) {
     saludar("query_control");
 
-    if(argc < 3){
+    if(argc < 4){
         fprintf(stderr, "Uso: %s <nombre_archivo_configuracion> <nombre_archivo_query> <prioridad>\n", argv[0]);
         return EXIT_FAILURE;
     }
@@ -35,44 +33,16 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    t_paquete* paquete = generarPaquete();
-
     t_handshake_qc_master* handshake = generarHandshake();
-    
+
+    t_paquete* paquete = generarPaquete(handshake);
+
     enviar_paquete(conexion_master, paquete);
 
-    confirmarRecepcion(conexion_master)
+    char* confirmacion = confirmarRecepcion(conexion_master);
     
     limpiarMemoria(confirmacion, handshake);
 
     return 0;
 }
 
-t_paquete* generarPaquete () {
-    t_paquete* paquete = malloc(sizeof(*paquete));
-    paquete->codigo_operacion = HANDSHAKE_QC_MASTER;
-    paquete->datos = serializar_handshake_qc_master(handshake);
-    return paquete;
-}
-
-t_handshake_qc_master* generarHandshake() {
-    t_handshake_qc_master* handshake = malloc(sizeof(*handshake));
-    handshake->archivo_configuracion = strdup(nombre_archivo_configuracion);
-    handshake->prioridad = prioridad;
-    return handshake;
-}
-
-void confirmarRecepcion (int conexion_master) {
-    char* confirmacion = recibir_string(conexion_master);
-    if(confirmacion == NULL){
-        fprintf(stderr, "Error al recibir confirmacion de recepecion\n");
-        return EXIT_FAILURE;
-    }
-    printf("Confirmacion de recepecion: %s\n", confirmacion);
-}
-
-void limpiarMemoria(char* confirmacion, t_handshake_qc_master* handshake) {
-    free(confirmacion);
-    free(handshake->archivo_configuracion);
-    free(handshake);
-}

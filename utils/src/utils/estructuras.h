@@ -14,6 +14,8 @@
 */
 typedef enum{
     HANDSHAKE_QC_MASTER,
+    HANDSHAKE_WORKER_STORAGE,
+    HANDSHAKE_WORKER_MASTER
 } e_codigo_operacion;
 
 /**
@@ -51,6 +53,14 @@ typedef struct {
     char* archivo_configuracion;
     uint32_t prioridad;
 } t_handshake_qc_master;
+
+typedef struct {
+    char* id_worker;
+} t_handshake_worker_storage;
+
+typedef struct {
+    char* id_worker;
+} t_handshake_worker_master;
 
 
 
