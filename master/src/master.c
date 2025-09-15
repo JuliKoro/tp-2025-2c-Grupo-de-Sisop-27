@@ -2,25 +2,28 @@
 #include <utils/configs.h>
 #include <utils/mensajeria.h>
 #include "conexion.h"
+#include "m_funciones.h"
+
+t_log* logger_master =NULL;
 
 int main(int argc, char* argv[]) {
     saludar("master");
 
-    master_conf* master_conf = get_configs_master("master.config");
-    printf("PUERTO_ESCUCHA: %d\n", master_conf->puerto_escucha);
-    printf("ALGORITMO_PLANIFICACION: %s\n", master_conf->algoritmo_planificacion);
-    printf("TIEMPO_AGING: %d\n", master_conf->tiempo_aging);
-    printf("LOG_LEVEL: %s\n", master_conf->log_level);
-    
+    master_conf* master_conf = get_configs_master("master.config");    
+    logger_master = iniciarLoggerMaster(master_conf->log_level);
+
     char puerto_escucha[10];
     sprintf(puerto_escucha, "%d", master_conf->puerto_escucha);
     int socket_servidor = iniciar_servidor(puerto_escucha);
 
     if(socket_servidor == -1){
-        fprintf(stderr, "Error al iniciar el servidor\n");
+        log_error(logger_master, "Error al iniciar el servidor en el puerto %s", puerto_escucha);
         return EXIT_FAILURE;
     }
 
+
+
+    //Recepcion de conexiones
     while (1) {
         pthread_t thread;
         int *fd_conexion_ptr = malloc(sizeof(int));
