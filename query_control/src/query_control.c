@@ -3,7 +3,7 @@
 #include <utils/mensajeria.h>
 #include "qc_funciones.h"
 
-
+t_log* logger_qc = NULL;
 
 int main(int argc, char* argv[]) {
     saludar("query_control");
@@ -22,6 +22,10 @@ int main(int argc, char* argv[]) {
     printf("PUERTO_MASTER: %d\n", query_control_conf->puerto_master);
     printf("LOG_LEVEL: %s\n", query_control_conf->log_level);
 
+    logger_qc = iniciarLoggerQC(nombre_archivo_query, query_control_conf->log_level);
+    log_info(logger_qc, "Logger de Query Control inicializado");
+
+
     // Conectar Master.
 
     char puerto_master[10];
@@ -33,7 +37,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    t_handshake_qc_master* handshake = generarHandshake(nombre_archivo_configuracion, prioridad);
+    t_handshake_qc_master* handshake = generarHandshake(nombre_archivo_query, prioridad);
 
     t_paquete* paquete = generarPaquete(handshake);
 

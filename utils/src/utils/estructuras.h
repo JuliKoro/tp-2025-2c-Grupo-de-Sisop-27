@@ -60,7 +60,7 @@ typedef struct {
 * @param prioridad la prioridad de la query - int
 */
 typedef struct {
-    char* archivo_configuracion;
+    char* archivo_query;
     uint32_t prioridad;
 } t_handshake_qc_master;
 

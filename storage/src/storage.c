@@ -2,6 +2,9 @@
 #include <utils/configs.h>
 #include <utils/mensajeria.h>
 #include "conexion.h"
+#include "s_funciones.h"
+
+t_log* logger_storage = NULL;
 
 int main(int argc, char* argv[]) {
     saludar("master");
@@ -16,8 +19,11 @@ int main(int argc, char* argv[]) {
     sprintf(puerto_escucha, "%d", storage_conf->puerto_escucha);
     int socket_servidor = iniciar_servidor(puerto_escucha);
 
+    logger_storage = iniciarLoggerStorage(storage_conf->log_level);
+    log_info(logger_storage, "Logger de Storage inicializado");
+
     if(socket_servidor == -1){
-        fprintf(stderr, "Error al iniciar el servidor\n");
+        log_error(logger_storage, "Error al iniciar el servidor en el puerto %s", puerto_escucha);
         return EXIT_FAILURE;
     }
 

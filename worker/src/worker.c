@@ -1,9 +1,10 @@
 #include <utils/hello.h>
 #include <utils/configs.h>
 #include <utils/mensajeria.h>
+#include <string.h>
 #include "funciones.h"
 
-
+t_log* logger_worker = NULL;
 
 int main(int argc, char* argv[]) {
     saludar("worker");
@@ -23,7 +24,10 @@ int main(int argc, char* argv[]) {
     sprintf(puerto_storage, "%d", worker_conf->puerto_storage);
     sprintf(puerto_master, "%d", worker_conf->puerto_master);
 
-    printf("WORKER INICIALIZADO: %d \n", id_worker);
+    //Iniciar logger
+    logger_worker = iniciarLoggerWorker(argv[2], worker_conf->log_level);
+
+    log_info(logger_worker, "Iniciado worker %d", id_worker);
  
     
 

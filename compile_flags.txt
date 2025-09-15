@@ -1,0 +1,8 @@
+-I./utils/src/utils
+-I./worker/src
+-I./storage/src
+-I./query-control/src
+-I./master/src
+-std=gnu11
+-Wall
+-Wextra

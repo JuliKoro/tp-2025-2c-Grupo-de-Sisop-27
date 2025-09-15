@@ -3,9 +3,9 @@
 #include <utils/configs.h>
 #include <utils/mensajeria.h>
 
-t_handshake_qc_master* generarHandshake(char* archivo_configuracion, int prioridad) {
+t_handshake_qc_master* generarHandshake(char* archivo_query, int prioridad) {
     t_handshake_qc_master* handshake = malloc(sizeof(*handshake));
-    handshake->archivo_configuracion = strdup(archivo_configuracion);
+    handshake->archivo_query = strdup(archivo_query);
     handshake->prioridad = prioridad;
     return handshake;
 }
@@ -28,6 +28,6 @@ void confirmarRecepcion (int conexion_master) {
 }
 
 void limpiarMemoria(t_handshake_qc_master* handshake) {
-    free(handshake->archivo_configuracion);
+    free(handshake->archivo_query);
     free(handshake);
 }

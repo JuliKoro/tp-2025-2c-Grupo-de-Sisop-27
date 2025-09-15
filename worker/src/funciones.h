@@ -4,6 +4,9 @@
 #include <utils/hello.h>
 #include <utils/configs.h>
 #include <utils/mensajeria.h>
+#include <utils/loggeo.h>
+
+extern t_log* logger_worker;
 
 /**
  * @brief Genera un handshake entre worker y storage

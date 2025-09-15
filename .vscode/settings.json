@@ -4,6 +4,8 @@
         "configs.h": "c",
         "mensajeria.h": "c",
         "hello.h": "c",
-        "qc_funciones.h": "c"
+        "qc_funciones.h": "c",
+        "funciones.h": "c",
+        "loggeo.h": "c"
     }
 }

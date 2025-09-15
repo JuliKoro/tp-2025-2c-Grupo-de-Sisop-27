@@ -4,7 +4,9 @@
 #include <utils/hello.h>
 #include <utils/configs.h>
 #include <utils/mensajeria.h>
+#include<utils/loggeo.h>
 
+extern t_log* logger_qc;
 
 /**
 * @brief Genera un handshake entre query control y master
