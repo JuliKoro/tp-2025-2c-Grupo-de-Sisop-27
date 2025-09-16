@@ -7,6 +7,10 @@
 #include <pthread.h>
 
 
+/**
+ * @brief Inicia el hilo que atiende las conexiones entrantes, esto es para que el main pueda seguir con su logica
+ */
+void* iniciar_receptor(void* socket_servidor);
 
 /**
  * @brief Atiende la conexion de un query control

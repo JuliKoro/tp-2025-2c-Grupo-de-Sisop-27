@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     printf("LOG_LEVEL: %s\n", query_control_conf->log_level);
 
     logger_qc = iniciarLoggerQC(nombre_archivo_query, query_control_conf->log_level);
-    log_info(logger_qc, "Logger de Query Control inicializado");
+
 
 
     // Conectar Master.
@@ -45,6 +45,14 @@ int main(int argc, char* argv[]) {
 
     confirmarRecepcion(conexion_master);
     
+    while(1) {
+        // Mantener la conexión abierta para detectar desconexiones y recibir mensajes
+        t_paquete* paquete = recibir_paquete(conexion_master);
+        if(paquete == NULL) {
+            log_info(logger_qc, "El Master se ha desconectado.");
+            break;
+        }
+    }
     limpiarMemoria(handshake);
 
     return 0;

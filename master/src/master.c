@@ -1,65 +1,48 @@
 #include <utils/hello.h>
-#include <utils/configs.h>
 #include <utils/mensajeria.h>
 #include "conexion.h"
 #include "m_funciones.h"
 
 t_log* logger_master =NULL;
+master_conf* master_config = NULL;
+int identificadorQueryGlobal = 0;
+int nivelMultiprogramacion = 0;
 
 int main(int argc, char* argv[]) {
-    saludar("master");
-
-    master_conf* master_conf = get_configs_master("master.config");    
-    logger_master = iniciarLoggerMaster(master_conf->log_level);
-
+    //Arrancamos configs y logger
+    master_config = get_configs_master("master.config");    
+    logger_master = iniciarLoggerMaster(master_config->log_level);
+    //Pasamos el puerto de int a char para levantar el server
     char puerto_escucha[10];
-    sprintf(puerto_escucha, "%d", master_conf->puerto_escucha);
+    sprintf(puerto_escucha, "%d", master_config->puerto_escucha);
     int socket_servidor = iniciar_servidor(puerto_escucha);
-
     if(socket_servidor == -1){
         log_error(logger_master, "Error al iniciar el servidor en el puerto %s", puerto_escucha);
         return EXIT_FAILURE;
     }
+    //iniciamos listas y semaforos
+    inicializarListasYSemaforos();
 
+    //Iniciamos la logica de recepcion en un hilo aparte, para poder probar cosas en main
+    pthread_t threadReceptor;
+    pthread_create(&threadReceptor, NULL, iniciar_receptor, &socket_servidor);
+    pthread_detach(threadReceptor);
 
-
-    //Recepcion de conexiones
-    while (1) {
-        pthread_t thread;
-        int *fd_conexion_ptr = malloc(sizeof(int));
-        *fd_conexion_ptr = esperar_cliente(socket_servidor);
-        if(*fd_conexion_ptr == -1){
-            fprintf(stderr, "Error al esperar cliente\n");
-            return EXIT_FAILURE;
-        }
-        t_paquete* paquete = recibir_paquete(*fd_conexion_ptr);
-        if(paquete == NULL){
-            fprintf(stderr, "Error al recibir paquete\n");
-            return EXIT_FAILURE;
-        }
-
-        switch(paquete->codigo_operacion) {
-            t_thread_args* thread_args;
-            case HANDSHAKE_QC_MASTER:
-                thread_args = malloc(sizeof(t_thread_args));
-                thread_args->paquete = paquete;
-                thread_args->fd_conexion = fd_conexion_ptr;
-                pthread_create(&thread, NULL, atender_query_control, (void*) thread_args);
-                pthread_detach(thread);
-                break;
-            case HANDSHAKE_WORKER_MASTER:
-                thread_args = malloc(sizeof(t_thread_args));
-                thread_args->paquete = paquete;
-                thread_args->fd_conexion = fd_conexion_ptr;
-                pthread_create(&thread, NULL, atender_worker, (void*) thread_args);
-                pthread_detach(thread);
-                break;
-            default:
-                fprintf(stderr, "Error: el paquete no es de tipo HANDSHAKE_<MODULO>_MASTER\n");
-                destruir_paquete(paquete);
-                return EXIT_FAILURE;
-        }
+    //Tests de manejo de listas
+    log_debug(logger_master, "Duermo 10 segundos para que se conecte un QC y mande una query");
+    sleep(10); 
+    t_query* query1 = list_get(listaQueriesReady, 0);
+    if(query1 != NULL) {
+        actualizarEstadoQuery(query1, Q_EXEC);
+        sleep(5);
+        actualizarEstadoQuery(query1, Q_EXIT);
     }
 
+    while(1) {
+        // El main puede seguir ejecutando otras cosas aquí
+        sleep(10); // Simula que el main está haciendo otras tareas
+    }
+
+    
     return 0;
 }

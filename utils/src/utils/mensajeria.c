@@ -268,16 +268,28 @@ t_paquete* recibir_paquete(int socket){
     }
     
     //Recibo el codigo de operacion primero
-    if(recv(socket, &(paquete->codigo_operacion), sizeof(e_codigo_operacion), MSG_WAITALL) <=0){
-        // Si falla la recepcion, libero el paquete y devuelvo NULL
+    int bytes = recv(socket, &(paquete->codigo_operacion), sizeof(e_codigo_operacion), MSG_WAITALL);
+    if(bytes == 0){
+        // Desconexión limpia
+        fprintf(stderr, "El cliente se ha desconectado.\n");
+        destruir_paquete(paquete);
+        return NULL;
+    }
+    if(bytes < 0){
+        // Error real
         fprintf(stderr, "Error al recibir el codigo de operacion: %s\n", strerror(errno));
         destruir_paquete(paquete);
         return NULL;
     }
 
     //Recibo el tamaño del buffer
-    if(recv(socket, &(paquete->datos->size), sizeof(uint32_t), MSG_WAITALL) <=0){
-        // Si falla la recepcion, libero el paquete y devuelvo NULL
+    bytes = recv(socket, &(paquete->datos->size), sizeof(uint32_t), MSG_WAITALL);
+    if(bytes == 0){
+        fprintf(stderr, "El cliente se ha desconectado.\n");
+        destruir_paquete(paquete);
+        return NULL;
+    }
+    if(bytes < 0){
         fprintf(stderr, "Error al recibir el tamaño del buffer del paquete: %s\n", strerror(errno));
         destruir_paquete(paquete);
         return NULL;
@@ -292,7 +304,13 @@ t_paquete* recibir_paquete(int socket){
             destruir_paquete(paquete);
             return NULL;
         }
-        if(recv(socket, paquete->datos->stream, paquete->datos->size, MSG_WAITALL) <=0){
+        bytes = recv(socket, paquete->datos->stream, paquete->datos->size, MSG_WAITALL);
+        if(bytes == 0){
+            fprintf(stderr, "El cliente se ha desconectado.\n");
+            destruir_paquete(paquete);
+            return NULL;
+        }
+        if(bytes < 0){
             fprintf(stderr, "Error al recibir el contenido del buffer del paquete: %s\n", strerror(errno));
             destruir_paquete(paquete);
             return NULL;
