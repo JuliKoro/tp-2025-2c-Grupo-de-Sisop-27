@@ -1,16 +1,11 @@
-#include <utils/hello.h>
-#include <utils/configs.h>
-#include <utils/mensajeria.h>
-#include <string.h>
-#include "funciones.h"
+#include "worker.h"
 
 t_log* logger_worker = NULL;
 
 int main(int argc, char* argv[]) {
-    saludar("worker");
-
+    fprintf(stderr, "Worker ID: %s\n", argv[2]);
     
-    if(argc < 3){
+    if(argc != 3){
         fprintf(stderr, "Uso: %s <nombre_archivo_configuracion> <id_worker>\n", argv[0]);
         return EXIT_FAILURE;
     }
@@ -18,6 +13,7 @@ int main(int argc, char* argv[]) {
     char* nombre_config = argv[1];
     uint32_t id_worker = atoi(argv[2]);
 
+    //Cargar configuracion
     worker_conf* worker_conf = get_configs_worker(nombre_config);
     char puerto_storage[10];
     char puerto_master[10];
@@ -27,9 +23,7 @@ int main(int argc, char* argv[]) {
     //Iniciar logger
     logger_worker = iniciarLoggerWorker(argv[2], worker_conf->log_level);
 
-    log_info(logger_worker, "Iniciado worker %d", id_worker);
- 
-    
+    log_debug(logger_worker, "Iniciado Worker ID: %d", id_worker);
 
     // Conectar con Storage.
     int conexion_storage = crear_conexion(worker_conf->ip_storage, puerto_storage);
@@ -38,6 +32,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
+    // Arreglar HS con Storage -> recibe TAM_PAGINA (Agregar en configs)
     t_handshake_worker_storage* handshakeStorage = generarHandshakeStorage(id_worker);
     
     t_paquete* paquete = generarPaqueteStorage(HANDSHAKE_WORKER_STORAGE, handshakeStorage);
@@ -64,8 +59,40 @@ int main(int argc, char* argv[]) {
     
     limpiarMemoriaMaster(handshakeMaster);
 
+    // INICIO MEMORIA INTERNA
+
+    // HILOS
+    pthread_t hilo_master, hilo_query_interpreter;
+
+    // Crear hilo para recibir quries y desalojos del master
+    pthread_create(&hilo_master, NULL, hilo_master, NULL);
     
+    // Crear hilo para ejecutar el Query Interpreter
+    pthread_create(&hilo_query_interpreter, NULL, hilo_query_interpreter, NULL);
+
+    // SEMAFOROS
+
+    // Esperar a que los hilos terminen (en este caso, no se espera porque son hilos de ejecución continua)
+    pthread_join(hilo_master, NULL);
+    pthread_join(hilo_master, NULL);
 
     return 0;
 }
 
+void* hilo_master(void* arg){
+
+    while (1)
+    {
+        // ASIGNACION DE QUERY
+    }
+    
+}
+
+void* hilo_query_interpreter(void* arg){
+
+    while (1)
+    {
+        // PARSEAR Y EJECUTAR QUERY
+    }
+    
+}

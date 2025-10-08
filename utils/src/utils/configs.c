@@ -1,6 +1,5 @@
 #include "configs.h"
 
-
 query_control_conf* get_configs_query_control(char* nombre_config){
     t_config* config = NULL;
     config = config_create(nombre_config);
