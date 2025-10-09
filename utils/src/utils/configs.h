@@ -2,6 +2,7 @@
 #define CONFIGS_H
 
 #include <commons/config.h>
+#include <commons/string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -74,6 +75,29 @@ typedef struct {
     char* log_level;
 } storage_conf;
 
+/**
+ * @brief Estructura para la configuracion del superblock
+ * @param fs_size - Tamaño del sistema de archivos
+ * @param block_size - Tamaño de bloque
+ */
+typedef struct {
+    int fs_size;
+    int block_size;
+} superblock_conf;
+
+/**
+ * @brief Estructura para la configuracion del metadata
+ * @param tamanio - Tamaño del archivo
+ * @param blocks - Bloques asignados al archivo, es un array de enteros
+ * @param estado - Estado del archivo
+ */
+typedef struct {
+    int tamanio;
+    int* blocks;
+    char* estado;
+    int cantidad_blocks;
+} metadata_conf;
+
 /** 
     * @brief Esta funcion devuelve una estructura query_control_conf con la configuracion del modulo query control ya cargada
     * @param nombre_config - Nombre del archivo de configuracion
@@ -102,6 +126,15 @@ typedef struct {
 */
  storage_conf* get_configs_storage(char* nombre_config);
 
+/**
+ * @brief Esta funcion devuelve una estructura superblock_conf con la configuracion del superblock ya cargada
+ */
+superblock_conf* get_configs_superblock(char* nombre_config);
+
+/**
+ * @brief Esta funcion devuelve una estructura metadata_conf con la configuracion del metadata ya cargada
+ */
+metadata_conf* get_configs_metadata(char* nombre_metadata);
 
 /** 
     * @brief Esta funcion destruye la estructura query_control_conf, liberando la memoria asignada a los strings internos
@@ -126,5 +159,16 @@ void destruir_configs_worker(worker_conf* worker_conf);
     * @param storage_conf - Estructura storage_conf a destruir
 */
 void destruir_configs_storage(storage_conf* storage_conf);
+
+/**
+ * @brief Esta funcion destruye la estructura superblock_conf, liberando la memoria asignada a los strings internos
+ */
+void destruir_configs_superblock(superblock_conf* superblock_conf);
+
+/**
+ * @brief Esta funcion destruye la estructura metadata_conf, liberando la memoria asignada a los strings internos
+ */
+void destruir_configs_metadata(metadata_conf* metadata_conf);
+
 
 #endif

@@ -136,7 +136,15 @@ storage_conf* get_configs_storage(char* nombre_config){
         printf("ERROR: No se encontro la propiedad PUERTO_ESCUCHA en el archivo de configuracion\n");
     }
     if(config_has_property(config, "FRESH_START")){
-        storage_conf->fresh_start = config_get_int_value(config, "FRESH_START");
+        char* temp = config_get_string_value(config, "FRESH_START");
+        if (strcmp(temp, "TRUE") == 0) {
+            storage_conf->fresh_start = true;
+        } else if (strcmp(temp, "FALSE") == 0) {
+        storage_conf->fresh_start = false;
+        } else {
+            printf("ERROR: La propiedad FRESH_START debe ser TRUE o FALSE\n");
+            storage_conf->fresh_start = false; // Valor por defecto en caso de error
+        }
     } else {
         printf("ERROR: No se encontro la propiedad FRESH_START en el archivo de configuracion\n");
     }
@@ -166,6 +174,73 @@ storage_conf* get_configs_storage(char* nombre_config){
     return storage_conf;
 }
 
+superblock_conf* get_configs_superblock(char* nombre_config){
+    t_config* config = NULL;
+    config = config_create(nombre_config);
+    superblock_conf* superblock_conf = malloc(sizeof(*superblock_conf));
+
+    if(config_has_property(config, "FS_SIZE")){
+        superblock_conf->fs_size = config_get_int_value(config, "FS_SIZE");
+    } else {
+        printf("ERROR: No se encontro la propiedad FS_SIZE en el archivo de configuracion\n");
+    }
+    if(config_has_property(config, "BLOCK_SIZE")){
+        superblock_conf->block_size = config_get_int_value(config, "BLOCK_SIZE");
+    } else {
+        printf("ERROR: No se encontro la propiedad BLOCK_SIZE en el archivo de configuracion\n");
+    }
+    config_destroy(config);
+    return superblock_conf;
+}
+
+metadata_conf* get_configs_metadata(char* nombre_metadata){
+    t_config* config = NULL;
+    config = config_create(nombre_metadata);
+    metadata_conf* metadata_conf = malloc(sizeof(*metadata_conf));
+
+    if(config_has_property(config, "TAMANIO")){
+        metadata_conf->tamanio = config_get_int_value(config, "TAMANIO");
+    } else {
+        printf("ERROR: No se encontro la propiedad TAMANIO en el archivo de metadata\n");
+    }
+    if(config_has_property(config, "BLOCKS")){
+        int cantidad = 0;
+        char** string_array = config_get_array_value(config, "BLOCKS");
+        while(string_array[cantidad]!= NULL){
+            cantidad++;
+        }
+        int* int_array = malloc(cantidad * sizeof(int));
+
+        if(int_array == NULL){
+            printf("No se pudo asignar memoria para el int array de bloques");
+        }
+
+        for(int i = 0; i< cantidad; i++){
+            int_array[i] = atoi(string_array[i]);
+        }
+
+        string_array_destroy(string_array);
+
+        metadata_conf->blocks = int_array;
+        metadata_conf->cantidad_blocks= cantidad;
+
+
+
+
+    } else {
+        printf("ERROR: No se encontro la propiedad BLOCKS en el archivo de metadata\n");
+    }
+    if(config_has_property(config, "ESTADO")){
+        char* temp = config_get_string_value(config, "ESTADO");
+        metadata_conf->estado = strdup(temp);
+    } else {
+        printf("ERROR: No se encontro la propiedad ESTADO en el archivo de metadata\n");
+    }
+    config_destroy(config);
+    return metadata_conf;
+}
+
+
 void destruir_configs_query_control(query_control_conf* query_control_conf){
     printf("Destruyendo configuracion de query control\n");
     free(query_control_conf->ip_master);
@@ -194,3 +269,14 @@ void destruir_configs_storage(storage_conf* storage_conf){
     free(storage_conf);
 }
 
+
+void destruir_configs_superblock(superblock_conf* superblock_conf){
+    printf("Destruyendo configuracion de storage superblock\n");
+    free(superblock_conf);
+}
+
+void destruir_configs_metadata(metadata_conf* metadata_conf){
+    printf("Destruyendo configuracion de storage metadafa\n");
+    free(metadata_conf->estado);
+    free(metadata_conf);
+}
