@@ -6,4 +6,5 @@
 extern t_log* logger_storage;
 
 
+
 #endif

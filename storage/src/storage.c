@@ -9,10 +9,17 @@ t_log* logger_storage = NULL;
 int main(int argc, char* argv[]) {
     saludar("master");
 
-    storage_conf* storage_conf = get_configs_storage("storage.config");
+    if(argc < 3){
+        fprintf(stderr, "Uso: %s <nombre_archivo_configuracion> <nombre_archivo_superblock config>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+    char* nombre_archivo_configuracion = argv[1];
+    char* nombre_archivo_superbock = argv[2];
+    storage_conf* storage_conf = get_configs_storage(nombre_archivo_configuracion);
     printf("PUERTO_ESCUCHA: %d\n", storage_conf->puerto_escucha);
     printf("PUNTO_MONTAJE: %s\n", storage_conf->punto_montaje);
     printf("LOG_LEVEL: %s\n", storage_conf->log_level);
+
     
 
     char puerto_escucha[10];
@@ -26,6 +33,17 @@ int main(int argc, char* argv[]) {
         log_error(logger_storage, "Error al iniciar el servidor en el puerto %s", puerto_escucha);
         return EXIT_FAILURE;
     }
+
+    //Logica de creacion de archivos y rutas
+    log_debug(logger_storage, "Iniciando logica de creacion de archivos y rutas");
+    log_debug(logger_storage, "PUNTO_MONTAJE: %s", storage_conf->punto_montaje);
+    log_debug(logger_storage, "FRESH_START: %s", storage_conf->fresh_start?"true":"false");
+
+    if(storage_conf->fresh_start){
+        
+    }
+
+
 
     while (1) {
         pthread_t thread;
