@@ -7,29 +7,33 @@
 
 t_log* logger_storage = NULL;
 
+storage_conf* storage_config = NULL;
+
+superblock_conf* superblock_config = NULL;
+
 int main(int argc, char* argv[]) {
-    saludar("master");
+    saludar("storage");
 
     if(argc < 3){
         fprintf(stderr, "Uso: %s <nombre_archivo_configuracion> <nombre_archivo_superblock config>\n", argv[0]);
         return EXIT_FAILURE;
     }
     char* nombre_archivo_configuracion = argv[1];
-    storage_conf* storage_conf = get_configs_storage(nombre_archivo_configuracion);
-    char* path_superblock = string_duplicate(storage_conf->punto_montaje);
+    storage_config = get_configs_storage(nombre_archivo_configuracion);
+    char* path_superblock = string_duplicate(storage_config->punto_montaje);
     string_append(&path_superblock, "/");
     string_append(&path_superblock, argv[2]);
-    printf("PUERTO_ESCUCHA: %d\n", storage_conf->puerto_escucha);
-    printf("PUNTO_MONTAJE: %s\n", storage_conf->punto_montaje);
-    printf("LOG_LEVEL: %s\n", storage_conf->log_level);
+    printf("PUERTO_ESCUCHA: %d\n", storage_config->puerto_escucha);
+    printf("PUNTO_MONTAJE: %s\n", storage_config->punto_montaje);
+    printf("LOG_LEVEL: %s\n", storage_config->log_level);
 
     
 
     char puerto_escucha[10];
-    sprintf(puerto_escucha, "%d", storage_conf->puerto_escucha);
+    sprintf(puerto_escucha, "%d", storage_config->puerto_escucha);
     int socket_servidor = iniciar_servidor(puerto_escucha);
 
-    logger_storage = iniciarLoggerStorage(storage_conf->log_level);
+    logger_storage = iniciarLoggerStorage(storage_config->log_level);
 
     if(socket_servidor == -1){
         log_error(logger_storage, "Error al iniciar el servidor en el puerto %s", puerto_escucha);
@@ -38,17 +42,23 @@ int main(int argc, char* argv[]) {
 
     //Logica de creacion de archivos y rutas
     log_debug(logger_storage, "Iniciando logica de creacion de archivos y rutas");
-    log_debug(logger_storage, "PUNTO_MONTAJE: %s", storage_conf->punto_montaje);
-    log_debug(logger_storage, "FRESH_START: %s", storage_conf->fresh_start?"true":"false");
+    log_debug(logger_storage, "PUNTO_MONTAJE: %s", storage_config->punto_montaje);
+    log_debug(logger_storage, "FRESH_START: %s", storage_config->fresh_start?"true":"false");
+    
+    log_debug(logger_storage, "LEYENDO ARCHIVO DE CONFIGURACION SUPERBLOCK");
+    superblock_config = get_configs_superblock(argv[2]);
+    printf("Tamanio del sistema de archivos: %d \n", superblock_config->fs_size);
+    printf("Tamanio de los bloques: %d \n", superblock_config->block_size);
+    printf("Cantidad de bloques con esta superbock config: %d \n", superblock_config->cantidad_bloques);
 
-    if(storage_conf->fresh_start){
+
+    if(storage_config->fresh_start){
         log_debug(logger_storage, "Copiando superblock.config a %s", path_superblock);
-        inicializarPuntoMontaje(storage_conf->punto_montaje);
+        inicializarPuntoMontaje(storage_config->punto_montaje);
         copiarArchivo(argv[2], path_superblock);
     }
 
-
-
+    
     while (1) {
         log_info(logger_storage, "Iniciando ciclo de espera de clientes");
         pthread_t thread;

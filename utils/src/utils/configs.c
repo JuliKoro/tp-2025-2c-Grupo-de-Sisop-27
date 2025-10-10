@@ -189,6 +189,7 @@ superblock_conf* get_configs_superblock(char* nombre_config){
     } else {
         printf("ERROR: No se encontro la propiedad BLOCK_SIZE en el archivo de configuracion\n");
     }
+    superblock_conf->cantidad_bloques = superblock_conf->fs_size / superblock_conf->block_size;
     config_destroy(config);
     return superblock_conf;
 }

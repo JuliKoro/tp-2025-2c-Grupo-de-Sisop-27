@@ -83,6 +83,7 @@ typedef struct {
 typedef struct {
     int fs_size;
     int block_size;
+    int cantidad_bloques;
 } superblock_conf;
 
 /**

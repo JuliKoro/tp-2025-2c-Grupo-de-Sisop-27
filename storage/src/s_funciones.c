@@ -50,6 +50,28 @@ void crearArchivo(char* path){
     log_info(logger_storage, "Archivo %s creado exitosamente", path);
 }
 
+void crearBloques(){
+    log_debug(logger_storage, "Creando %d bloques...", superblock_config->cantidad_bloques);
+    char* path_bloques = string_duplicate(storage_config->punto_montaje);
+    string_append(&path_bloques, "/physical_blocks");
+
+    for(int i=0; i<superblock_config->cantidad_bloques; i++){
+        char* rutaCompleta = string_from_format("%s/block%04d.dat",path_bloques,i);
+        int fd = open(rutaCompleta, O_CREAT | O_RDWR, 0664); //TODO: Revisar permisos
+
+        if (fd != -1) {
+            // Establecer el tamaño del archivo a los bytes que indique el superblock.config
+            ftruncate(fd, superblock_config->block_size); 
+            close(fd);
+        } else {
+            log_error(logger_storage, "open devolvio error al crear bloque %s", rutaCompleta);
+         }
+        free(rutaCompleta);
+    }
+    log_debug(logger_storage, "Loop de creacion de %d bloques terminado", superblock_config->cantidad_bloques);
+    return;
+}
+
 void inicializarPuntoMontaje(char* path){
     struct stat st = {0};
     //Nos fijamos si existe la ruta
@@ -64,6 +86,8 @@ void inicializarPuntoMontaje(char* path){
         if(system(comando) != 0){
             log_error(logger_storage, "Error al eliminar el punto de montaje %s", path);
             exit(EXIT_FAILURE);
+        } else {
+            log_debug(logger_storage, "Punto de montaje anterior borrado con exito.");
         }
     }
 
@@ -76,13 +100,13 @@ void inicializarPuntoMontaje(char* path){
         log_info(logger_storage, "Punto de montaje %s creado exitosamente", path);
     }
 
-    log_info(logger_storage, "Creando el archivo bitmap.bin en %s", path);
+    log_debug(logger_storage, "Creando el archivo bitmap.bin en %s", path);
     char* bitmap_path = string_duplicate(path);
     string_append(&bitmap_path, "/bitmap.bin");
     crearArchivo(bitmap_path);
     free(bitmap_path);
 
-    log_info(logger_storage, "Creando el archivo blocks_hash_index.config en %s", path);
+    log_debug(logger_storage, "Creando el archivo blocks_hash_index.config en %s", path);
     char* blocks_hash_index_path = string_duplicate(path);
     string_append(&blocks_hash_index_path, "/blocks_hash_index.config");
     crearArchivo(blocks_hash_index_path);
@@ -107,7 +131,11 @@ void inicializarPuntoMontaje(char* path){
     } else {
         log_info(logger_storage, "Directorio files creado exitosamente en %s", path);
     }
-    log_info(logger_storage, "Directorios nativos creados exitosamente. Liberando memoria asignada dinamicamente para este procedimiento");
+    
+    log_debug(logger_storage, "Llamando a crearBloques()...");
+    crearBloques();
+
+    log_info(logger_storage, "Directorios nativos y bloques creados exitosamente. Liberando memoria asignada dinamicamente para este procedimiento");
     free(physical_blocks);
     free(files_folder);
 

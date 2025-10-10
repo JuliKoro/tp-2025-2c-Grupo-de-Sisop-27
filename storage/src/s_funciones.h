@@ -9,8 +9,14 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <commons/string.h>
+#include <utils/configs.h>
 
 extern t_log* logger_storage;
+
+extern storage_conf* storage_config;
+
+extern superblock_conf* superblock_config;
+
 
 /**
  * @brief Copia un archivo de origen a destino
@@ -26,6 +32,12 @@ void copiarArchivo(char* origen, char* destino);
  * @return void
  */
 void crearArchivo(char* path);
+
+/**
+ * @brief Usa los valores del archivo superblock.config para crear los bloques fisicos necesarios. 
+ * @return void
+ */
+void crearBloques();
 
 /**
  * @brief Inicializa el punto de montaje. Si no existe lo crea. Si existe lo borra y crea uno nuevo. 
