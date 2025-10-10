@@ -15,8 +15,10 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
     char* nombre_archivo_configuracion = argv[1];
-    char* nombre_archivo_superbock = argv[2];
     storage_conf* storage_conf = get_configs_storage(nombre_archivo_configuracion);
+    char* path_superblock = string_duplicate(storage_conf->punto_montaje);
+    string_append(&path_superblock, "/");
+    string_append(&path_superblock, argv[2]);
     printf("PUERTO_ESCUCHA: %d\n", storage_conf->puerto_escucha);
     printf("PUNTO_MONTAJE: %s\n", storage_conf->punto_montaje);
     printf("LOG_LEVEL: %s\n", storage_conf->log_level);
@@ -40,11 +42,9 @@ int main(int argc, char* argv[]) {
     log_debug(logger_storage, "FRESH_START: %s", storage_conf->fresh_start?"true":"false");
 
     if(storage_conf->fresh_start){
-        char* destino = string_duplicate(storage_conf->punto_montaje); //Hay que liberar destino
-        string_append(&destino, "/superblock.config");
-        log_debug(logger_storage, "Copiando superblock.config a %s", destino);
+        log_debug(logger_storage, "Copiando superblock.config a %s", path_superblock);
         inicializarPuntoMontaje(storage_conf->punto_montaje);
-        copiarArchivo(nombre_archivo_superbock, destino);
+        copiarArchivo(argv[2], path_superblock);
     }
 
 
