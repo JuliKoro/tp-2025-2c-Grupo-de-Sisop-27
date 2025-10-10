@@ -3,6 +3,7 @@
 #include <utils/mensajeria.h>
 #include "conexion.h"
 #include "s_funciones.h"
+#include <commons/string.h>
 
 t_log* logger_storage = NULL;
 
@@ -27,7 +28,6 @@ int main(int argc, char* argv[]) {
     int socket_servidor = iniciar_servidor(puerto_escucha);
 
     logger_storage = iniciarLoggerStorage(storage_conf->log_level);
-    log_info(logger_storage, "Logger de Storage inicializado");
 
     if(socket_servidor == -1){
         log_error(logger_storage, "Error al iniciar el servidor en el puerto %s", puerto_escucha);
@@ -40,12 +40,17 @@ int main(int argc, char* argv[]) {
     log_debug(logger_storage, "FRESH_START: %s", storage_conf->fresh_start?"true":"false");
 
     if(storage_conf->fresh_start){
-        
+        char* destino = string_duplicate(storage_conf->punto_montaje); //Hay que liberar destino
+        string_append(&destino, "/superblock.config");
+        log_debug(logger_storage, "Copiando superblock.config a %s", destino);
+        inicializarPuntoMontaje(storage_conf->punto_montaje);
+        copiarArchivo(nombre_archivo_superbock, destino);
     }
 
 
 
     while (1) {
+        log_info(logger_storage, "Iniciando ciclo de espera de clientes");
         pthread_t thread;
         int *fd_conexion_ptr = malloc(sizeof(int));
         *fd_conexion_ptr = esperar_cliente(socket_servidor);
