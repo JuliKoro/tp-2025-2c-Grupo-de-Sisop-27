@@ -10,6 +10,125 @@ t_log* logger_worker = NULL;
 
 uint32_t id_worker; //La hice global para que se pueda usar en el hilo master
 
+//--------- Ce estuvo aqui, hello ---------
+// Variable global para la memoria
+memoria_interna* memoria_worker = NULL;
+
+memoria_interna* inicializar_memoria(int tam_memoria_config, int tam_pagina_hardcodeado) {
+    memoria_interna* mem = malloc(sizeof(memoria_interna));
+    if (!mem) {
+        fprintf(stderr, "Error: No se pudo asignar memoria para memoria_interna\n");
+        return NULL;
+    }
+    
+    // Hardcodeo el tamaño de página por ahora
+    mem->tam_pagina = tam_pagina_hardcodeado; // Ej: 128 bytes
+    mem->tam_memoria = tam_memoria_config;
+    mem->cantidad_marcos = tam_memoria_config / tam_pagina_hardcodeado;
+    
+    
+    // Reservar la memoria principal
+    mem->memoria = malloc(tam_memoria_config);
+    if (!mem->memoria) {
+        fprintf(stderr, "Error: No se pudo asignar memoria principal\n");
+        free(mem);
+        return NULL;
+    }
+    
+
+    // Inicializar array de marcos libres
+    mem->marcos_libres = malloc(mem->cantidad_marcos * sizeof(int));
+        if (!mem->marcos_libres) {
+        fprintf(stderr, "Error: No se pudo asignar memoria para marcos_libres\n");
+        free(mem->memoria);
+        free(mem);
+    return NULL;
+    }   
+    // Inicializar todos los marcos como libres
+    for (int i = 0; i < mem->cantidad_marcos; i++) {
+        mem->marcos_libres[i] = 1; // 1 = libre, 0 = ocupado
+    }
+
+    
+    // Inicializar tabla de páginas vacía
+    mem->tabla = malloc(sizeof(tabla_paginas));
+    if (!mem->tabla) {
+        fprintf(stderr, "Error: No se pudo asignar memoria para tabla_paginas\n");
+        free(mem->marcos_libres);
+        free(mem->memoria);
+        free(mem);
+        return NULL;
+    }
+    
+    mem->tabla->entradas = NULL;
+    mem->tabla->cantidad_entradas = 0;
+    mem->tabla->algoritmo_reemplazo = 0; // 0 para LRU, 1 para CLOCK-M
+    
+    fprintf(stderr, "Memoria interna inicializada:\n");
+    fprintf(stderr, " - Tamaño memoria: %d bytes\n", mem->tam_memoria);
+    fprintf(stderr, " - Tamaño página: %d bytes\n", mem->tam_pagina);
+    fprintf(stderr, " - Cantidad de marcos: %d\n", mem->cantidad_marcos);
+    fprintf(stderr, " - Tabla de páginas creada (vacía)\n");
+
+    return mem;
+}
+
+void destruir_memoria(memoria_interna* mem) {
+    if (!mem) return;
+    
+    // Liberar todas las entradas de la tabla de páginas
+    if (mem->tabla && mem->tabla->entradas) {
+        for (int i = 0; i < mem->tabla->cantidad_entradas; i++) {
+            if (mem->tabla->entradas[i]) {
+                free(mem->tabla->entradas[i]->file_name);
+                free(mem->tabla->entradas[i]->tag_name);
+                free(mem->tabla->entradas[i]);
+            }
+        }
+        free(mem->tabla->entradas);
+    }
+    
+    // Liberar estructuras principales
+    if (mem->tabla) free(mem->tabla);
+    if (mem->marcos_libres) free(mem->marcos_libres);
+    if (mem->memoria) free(mem->memoria);
+    free(mem);
+    
+    fprintf(stderr, "Memoria interna liberada correctamente\n");
+}
+
+void mostrar_estado_memoria(memoria_interna* mem) {
+    if (!mem) {
+        fprintf(stderr, "Memoria no inicializada\n");
+        return;
+    }
+    
+    fprintf(stderr, "\n=== ESTADO DE LA MEMORIA INTERNA ===\n");
+    fprintf(stderr, "Tamaño total: %d bytes\n", mem->tam_memoria);
+    fprintf(stderr, "Tamaño página: %d bytes\n", mem->tam_pagina);
+    fprintf(stderr, "Marcos totales: %d\n", mem->cantidad_marcos);
+    
+    // Mostrar marcos libres
+    fprintf(stderr, "Marcos libres: ");
+    for (int i = 0; i < mem->cantidad_marcos; i++) {
+        fprintf(stderr, "%d ", mem->marcos_libres[i]);
+    }
+    fprintf(stderr, "\n");
+    
+    // Mostrar tabla de páginas
+    fprintf(stderr, "Entradas en tabla de páginas: %d\n", mem->tabla->cantidad_entradas);
+    for (int i = 0; i < mem->tabla->cantidad_entradas; i++) {
+        entrada_tabla_paginas* entrada = mem->tabla->entradas[i];
+        fprintf(stderr, "  [%d] File: %s, Tag: %s, Página: %d, Marco: %d, Presente: %d, Modificado: %d\n",
+                i, entrada->file_name, entrada->tag_name, entrada->numero_pagina,
+                entrada->marco, entrada->presente, entrada->modificado);
+    }
+    fprintf(stderr, "====================================\n\n");
+}
+
+//-------------------------------------------------------
+
+
 int main(int argc, char* argv[]) {
     fprintf(stderr, "Worker ID: %s\n", argv[2]);
 
@@ -24,6 +143,18 @@ int main(int argc, char* argv[]) {
     id_worker = atoi(argv[2]);
 
     inicializacion_worker(nombre_config, argv[2]);
+
+         // ========== CREACIÓN DE TABLAS DE PÁGINAS ==========
+    // Inicializar memoria con tabla de páginas
+    memoria_worker = inicializar_memoria(4096, 128); // Valores hardcodeados por ahora
+    
+    if (!memoria_worker) {
+        fprintf(stderr, "Error crítico: No se pudo inicializar la memoria\n");
+        return EXIT_FAILURE;
+    }
+    
+    // Mostrar estado inicial para verificar
+    mostrar_estado_memoria(memoria_worker);
 
     // CONEXIONES
     if (conexiones_worker() == EXIT_FAILURE) {

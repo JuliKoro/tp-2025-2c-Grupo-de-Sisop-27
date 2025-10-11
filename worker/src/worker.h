@@ -13,6 +13,7 @@
 
 #include "w_funciones.h"
 #include "registros.h"
+#include "estructuras.h"
 
 void inicializacion_worker(char* nombre_config, char* id_worker_str);
 
