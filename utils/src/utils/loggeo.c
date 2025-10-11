@@ -9,6 +9,7 @@ t_log* iniciarLoggerQC(char* archivo_query, char* log_level){
     log_info(logger, "Logger de Query Control inicializado");
     return logger;
 }
+
 t_log* iniciarLoggerMaster(char* log_level){
     t_log* logger = log_create("master.log", "MASTER", 1, log_level_from_string(log_level));
     log_info(logger, "Logger de Master inicializado");

@@ -339,7 +339,7 @@ t_buffer* serializar_handshake_qc_master(t_handshake_qc_master *handshake){
     //Creo el buffer
     t_buffer* buffer = crear_buffer(tamanio_buffer);
     //Agrego los datos
-    buffer_add_uint32(buffer, strlen(handshake->archivo_query));
+    buffer_add_uint32(buffer, strlen(handshake->archivo_query)); // Ya lo agrega buffer_add_string
     buffer_add_uint32(buffer, handshake->prioridad);
     //Agrego el string
     buffer_add_string(buffer, strlen(handshake->archivo_query), handshake->archivo_query);
@@ -348,7 +348,7 @@ t_buffer* serializar_handshake_qc_master(t_handshake_qc_master *handshake){
 
 t_handshake_qc_master* deserializar_handshake_qc_master(t_buffer *buffer){
     t_handshake_qc_master* handshake = malloc(sizeof(*handshake));
-    buffer_read_uint32(buffer);
+    buffer_read_uint32(buffer); //DUMMY FIELD?
     handshake->prioridad = buffer_read_uint32(buffer);
     handshake->archivo_query = buffer_read_string(buffer);
     return handshake;
@@ -378,4 +378,19 @@ t_handshake_worker_master* deserializar_handshake_worker_master(t_buffer *buffer
     t_handshake_worker_master* handshake = malloc(sizeof(*handshake));
     handshake->id_worker = buffer_read_uint32(buffer);
     return handshake;
+}
+
+t_buffer* serializar_asignacion_query(t_asignacion_query* asignacion){
+    uint32_t tamanio_buffer = sizeof(uint32_t) + strlen(asignacion->path_query) + sizeof(uint32_t);
+    t_buffer* buffer = crear_buffer(tamanio_buffer);
+    buffer_add_string(buffer, strlen(asignacion->path_query), asignacion->path_query);
+    buffer_add_uint32(buffer, asignacion->pc);
+    return buffer;
+}
+
+t_asignacion_query* deserializar_asignacion_query(t_buffer* buffer){
+    t_asignacion_query* asignacion = malloc(sizeof(t_asignacion_query));
+    asignacion->path_query = buffer_read_string(buffer);
+    asignacion->pc = buffer_read_uint32(buffer);
+    return asignacion;
 }

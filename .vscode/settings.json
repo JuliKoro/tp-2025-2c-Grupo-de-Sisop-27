@@ -7,6 +7,7 @@
         "qc_funciones.h": "c",
         "funciones.h": "c",
         "loggeo.h": "c",
-        "master.h": "c"
+        "master.h": "c",
+        "worker.h": "c"
     }
 }

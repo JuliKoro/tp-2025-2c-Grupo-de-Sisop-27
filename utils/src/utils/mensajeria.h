@@ -212,6 +212,21 @@ t_buffer* serializar_handshake_worker_master(t_handshake_worker_master *handshak
 */
 t_handshake_worker_master* deserializar_handshake_worker_master(t_buffer *buffer);
 
+/**
+ * @brief Serializa un t_asignacion_query
+ * @param asignacion el *t_asignacion_query a serializar
+ * @return el *t_buffer resultante
+ */
+t_buffer* serializar_asignacion_query(t_asignacion_query* asignacion);
+
+/**
+ * @brief Deserializa un t_asignacion_query
+ * @param buffer el *t_buffer a deserializar
+ * @return el *t_asignacion_query resultante. 
+ * @note La estructura debe ser liberada por el que la recibe
+ */
+t_asignacion_query* deserializar_asignacion_query(t_buffer* buffer);
+
 #endif
  
 

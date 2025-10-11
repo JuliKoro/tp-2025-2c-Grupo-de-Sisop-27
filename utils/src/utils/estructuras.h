@@ -12,10 +12,13 @@
 * @param HANDSHAKE_QC_MASTER - Handshake entre query control y master
 * 
 */
-typedef enum{
+typedef enum {
     HANDSHAKE_QC_MASTER,
     HANDSHAKE_WORKER_STORAGE,
-    HANDSHAKE_WORKER_MASTER
+    HANDSHAKE_WORKER_MASTER,
+    OP_ASIGNAR_QUERY, // Asignación de nueva Query
+    OP_DESALOJAR_QUERY, // Solicitud de desalojo
+    OP_FIN_QUERY, // Notificación de fin de Query
 } e_codigo_operacion;
 
 /**
@@ -80,6 +83,15 @@ typedef struct {
     uint32_t id_worker;
 } t_handshake_worker_master;
 
-
+/**
+ * @brief Estructura para la asigancion de una nueva query
+ * @param path_query el path de la query - char*
+ * @param pc el valor inicial del program counter - uint32_t
+ * @note Utilizado para caundo el master asigna una nueva query al worker
+ */
+typedef struct {
+    char* path_query;  // PATH (string, serializado con longitud)
+    uint32_t pc;       // PC (binario, 4 bytes)
+} t_asignacion_query;
 
 #endif
