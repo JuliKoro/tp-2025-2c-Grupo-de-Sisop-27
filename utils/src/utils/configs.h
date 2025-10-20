@@ -79,6 +79,7 @@ typedef struct {
  * @brief Estructura para la configuracion del superblock
  * @param fs_size - Tamaño del sistema de archivos
  * @param block_size - Tamaño de bloque
+ * @param cantidad_bloques - Cantidad de bloques
  */
 typedef struct {
     int fs_size;

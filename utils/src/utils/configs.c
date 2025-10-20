@@ -242,6 +242,7 @@ metadata_conf* get_configs_metadata(char* nombre_metadata){
 }
 
 
+
 void destruir_configs_query_control(query_control_conf* query_control_conf){
     printf("Destruyendo configuracion de query control\n");
     free(query_control_conf->ip_master);
@@ -269,13 +270,10 @@ void destruir_configs_storage(storage_conf* storage_conf){
     free(storage_conf->log_level);
     free(storage_conf);
 }
-
-
 void destruir_configs_superblock(superblock_conf* superblock_conf){
     printf("Destruyendo configuracion de storage superblock\n");
     free(superblock_conf);
 }
-
 void destruir_configs_metadata(metadata_conf* metadata_conf){
     printf("Destruyendo configuracion de storage metadafa\n");
     free(metadata_conf->estado);
