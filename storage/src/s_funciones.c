@@ -340,6 +340,7 @@ void crearHardLink(char* nombreFile, char* nombreTag){
     free(pathMetadata);
   
 }
+
 void inicializarPuntoMontaje(char* path){
     struct stat st = {0};
     //Nos fijamos si existe la ruta
@@ -431,7 +432,7 @@ void inicializarPuntoMontaje(char* path){
     string_append(&metadataConfigPath, "/metadata.config");
     crearArchivo(metadataConfigPath,0);
     int initial_blocks[1] = {0};
-    escribirMetadataConfig(metadataConfigPath, 0, initial_blocks, 1, "COMMITED");
+    escribirMetadataConfig(metadataConfigPath, g_superblock_config->block_size, initial_blocks, 1, "COMMITED");
 
     string_append(&initial_file, "/logical_blocks");
     if(mkdir(initial_file, 0777) == -1){
