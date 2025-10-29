@@ -150,6 +150,13 @@ int main(int argc, char* argv[]) {
 
     inicializacion_worker(nombre_config, argv[2]);
 
+    // CONEXIONES
+    if (conexiones_worker() == EXIT_FAILURE) {
+        fprintf(stderr, "Error en las conexiones del worker.\n");
+        return EXIT_FAILURE;
+    }
+
+    // INICIO MEMORIA INTERNA
          // ========== CREACIÓN DE TABLAS DE PÁGINAS ==========
     // Inicializar memoria con tabla de páginas
     memoria_worker = inicializar_memoria(4096, 128); // Valores hardcodeados por ahora
@@ -161,15 +168,6 @@ int main(int argc, char* argv[]) {
     
     // Mostrar estado inicial para verificar
     mostrar_estado_memoria(memoria_worker);
-
-    // CONEXIONES
-    if (conexiones_worker() == EXIT_FAILURE) {
-        fprintf(stderr, "Error en las conexiones del worker.\n");
-        return EXIT_FAILURE;
-    }
-
-    // INICIO MEMORIA INTERNA
-    // inicio_memoria();
 
     // HILOS
     pthread_t thread_master, thread_query_interpreter;
