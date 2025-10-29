@@ -1,5 +1,5 @@
-#ifndef QC_FUNCIONES_H
-#define QC_FUNCIONES_H
+#ifndef W_CONEXIONES_H
+#define W_CONEXIONES_H
 
 #include <utils/hello.h>
 #include <utils/configs.h>
