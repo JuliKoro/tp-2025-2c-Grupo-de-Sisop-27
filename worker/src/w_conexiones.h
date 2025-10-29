@@ -1,3 +1,25 @@
+/**
+ * @file w_conexiones.h
+ * @brief Módulo de conexiones del Worker (Scokets)
+ * 
+ * Este archivo contiene las funciones necesarias para establecer y gestionar
+ * las conexiones del Worker con los módulos Storage y Master del sistema.
+ * 
+ * Funcionalidades principales:
+ * - Generación de handshakes para establecer comunicación inicial
+ * - Serialización de estructuras de handshake en paquetes
+ * - Gestión de memoria de las estructuras de comunicación
+ * - Confirmación de recepción de mensajes
+ * 
+ * El archivo fuente w_conexiones.c implementa estas funciones que son utilizadas
+ * durante la inicialización del Worker para establecer las conexiones con:
+ * - Storage: Para operaciones de lectura/escritura de datos
+ * - Master: Para recibir asignaciones y comandos de queries
+ * 
+ * @author Grupo de Sisop 27
+ * @date 2C2025
+ */
+
 #ifndef W_CONEXIONES_H
 #define W_CONEXIONES_H
 
@@ -6,6 +28,11 @@
 #include <utils/mensajeria.h>
 #include <utils/loggeo.h>
 
+/**
+ * @brief Logger global del módulo Worker
+ * 
+ * @note Esta variable es compartida entre todos los archivos del Worker
+ */
 extern t_log* logger_worker;
 
 /**

@@ -10,6 +10,12 @@ t_log* logger_worker = NULL;
 
 uint32_t id_worker; //La hice global para que se pueda usar en el hilo master
 
+// Definición de registros y flags (declarados en registros.h)
+uint32_t pc_actual = 0;
+char* path_query = NULL;
+bool query_en_ejecucion = false;
+bool desalojar_query = false;
+
 //--------- Ce estuvo aqui, hello ---------
 // Variable global para la memoria
 memoria_interna* memoria_worker = NULL;
