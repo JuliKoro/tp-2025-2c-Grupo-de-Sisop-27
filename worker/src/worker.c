@@ -272,20 +272,19 @@ int conexiones_worker(){
     // Conectar con Storage.
     conexion_storage = crear_conexion(worker_configs->ip_storage, puerto_storage);
     if(conexion_storage == -1){
-        fprintf(stderr, "Error al conectar con el modulo storage.\n");
+        log_error(logger_worker, "Error al conectar con el modulo storage.");
         return EXIT_FAILURE;
     }
 
-    // Arreglar HS con Storage -> recibe TAM_PAGINA (Agregar en configs)
-    t_handshake_worker_storage* handshakeStorage = generarHandshakeStorage(id_worker);
-    
-    t_paquete* paquete = generarPaqueteStorage(HANDSHAKE_WORKER_STORAGE, handshakeStorage);
-    
-    enviar_paquete(conexion_storage, paquete);
-
-    confirmarRecepcion(conexion_storage);
-    
-    limpiarMemoriaStorage(handshakeStorage);
+    // Handshake con Storage para recibir el tamaño de página
+    t_tam_pagina* tam_pagina = handshake_worker_storage(conexion_storage, id_worker);
+    if(tam_pagina == NULL){
+        log_error(logger_worker, "Error en el handshake con Storage.");
+        return EXIT_FAILURE;
+    }
+    worker_configs->tam_pagina = tam_pagina->tam_pagina;
+    log_debug(logger_worker, "Handshake con Storage exitoso. Tamaño de página recibido: %d bytes", tam_pagina->tam_pagina);
+    free(tam_pagina);
 
     // Conectar con Master.
     conexion_master = crear_conexion(worker_configs->ip_master, puerto_master);
@@ -293,9 +292,10 @@ int conexiones_worker(){
         fprintf(stderr, "Error al conectar con el modulo storage.\n");
         return EXIT_FAILURE;
     }
+    // Handshake con Master
     t_handshake_worker_master* handshakeMaster = generarHandshakeMaster(id_worker);
 
-    paquete = generarPaqueteMaster(HANDSHAKE_WORKER_MASTER, handshakeMaster);
+    t_paquete* paquete = generarPaqueteMaster(HANDSHAKE_WORKER_MASTER, handshakeMaster);
     
     enviar_paquete(conexion_master, paquete);
 

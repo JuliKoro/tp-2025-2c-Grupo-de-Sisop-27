@@ -153,6 +153,34 @@ char* recibir_string(int socket){
     return string;
 }
 
+int enviar_entero(int socket, int valor) {
+    //Envio al socket un valor entero, chequeo errores
+    if(send(socket, &valor, sizeof(int), 0) == -1){
+        fprintf(stderr,"Error al enviar numero entero %d : %s\n", valor, strerror(errno));
+        return -1;
+    } 
+
+    printf("Valor entero enviado!\n");
+    return 0;
+}
+
+int recibir_entero(int socket, int* valor_recibido) {
+    int id;
+
+    //Recibo valor de id y chequeo errores
+    if(recv(socket, &id, sizeof(int), MSG_WAITALL) == -1){
+        fprintf(stderr,"Error al recibir el valor: %s\n", strerror(errno));
+        return -1;
+    }
+
+    //Casteo el u_int8_t a id_modulo_t y la almaceno en la variable que se recibio para eso
+    *valor_recibido = id;
+    
+    printf("Valor entero recibido!\n");
+    
+    return 0;
+}
+
 /***********************************************************************************************************************/
 /***                                           FUNCIONES DE MANEJO DE BUFFER                                         ***/
 /***********************************************************************************************************************/
@@ -393,4 +421,17 @@ t_asignacion_query* deserializar_asignacion_query(t_buffer* buffer){
     asignacion->path_query = buffer_read_string(buffer);
     asignacion->pc = buffer_read_uint32(buffer);
     return asignacion;
+}
+
+t_buffer* serializar_tam_pagina(t_tam_pagina* tam_pagina_struct) {
+    uint32_t tamanio_buffer = sizeof(uint32_t);
+    t_buffer* buffer = crear_buffer(tamanio_buffer);
+    buffer_add_uint32(buffer, tam_pagina_struct->tam_pagina);
+    return buffer;
+}
+
+t_tam_pagina* deserializar_tam_pagina(t_buffer* buffer) {
+    t_tam_pagina* tam_pagina_struct = malloc(sizeof(t_tam_pagina));
+    tam_pagina_struct->tam_pagina = buffer_read_uint32(buffer);
+    return tam_pagina_struct;
 }

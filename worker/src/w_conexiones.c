@@ -48,3 +48,25 @@ void confirmarRecepcion (int socket_conexion) {
     return;
 }
 
+t_tam_pagina* handshake_worker_storage(int socket_storage, int id_worker) {
+    // Hanshake con Storage para recibir el tamaño de página
+    if(enviar_entero(socket_storage, id_worker) == -1){
+        fprintf(stderr, "Error al enviar el ID del worker en el handshake con Storage.\n");
+        return NULL;
+    }
+
+    log_debug(logger_worker, "Handshake enviado al Storage con ID Worker: %d", id_worker);
+    log_debug(logger_worker, "Esperando recibir tamaño de página desde Storage...");
+
+    // Recibo la confirmacion de Storage con un paquete t_tam_pagina
+    t_tam_pagina* tam_pagina_struct;
+    t_paquete* paquete = recibir_paquete(socket_storage);
+    if (paquete->codigo_operacion != HANDSHAKE_WORKER_MASTER) {
+        fprintf(stderr, "Error: Código de operación inesperado en el handshake con Storage.\n");
+        destruir_paquete(paquete);
+        return NULL;
+    }
+    tam_pagina_struct = deserializar_tam_pagina(paquete->datos);
+    destruir_paquete(paquete);
+    return tam_pagina_struct;
+}

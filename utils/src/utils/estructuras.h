@@ -84,6 +84,15 @@ typedef struct {
 } t_handshake_worker_master;
 
 /**
+ * @brief Estructura para enviar el tamaño de página/bloque
+ * @param tam_pagina el tamaño de la página en bytes - uint32_t
+ * @note Utilizado en el handshake entre worker y storage
+ */
+typedef struct {
+    uint32_t tam_pagina;      // Tamaño de cada página en bytes
+} t_tam_pagina;
+
+/**
  * @brief Estructura para la asigancion de una nueva query
  * @param path_query el path de la query - char*
  * @param pc el valor inicial del program counter - uint32_t

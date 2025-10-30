@@ -1,11 +1,13 @@
 #ifndef CONFIGS_H
 #define CONFIGS_H
 
-#include <commons/config.h>
-#include <commons/string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+
+#include <commons/config.h>
+#include <commons/string.h>
 
 /** 
     * @brief Estructura para la configuracion del modulo query control
@@ -55,6 +57,7 @@ typedef struct {
     char* algoritmo_reemplazo;
     char* path_queries;
     char* log_level;
+    uint32_t tam_pagina; // Agregado para almacenar el tamaño de página recibido en el handshake
 } worker_conf;
 
 /** 

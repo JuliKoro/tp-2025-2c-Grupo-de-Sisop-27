@@ -57,6 +57,22 @@ int enviar_string(int socket, char* string);
 */
 char* recibir_string(int socket);
 
+/**
+* @brief Envia un valor entero
+* @param socket el socket al cual se envia el mensaje
+* @param valor el valor entero a enviar
+* @return 0 si se envio correctamente, -1 si hay error.
+*/
+int enviar_entero(int socket, int valor);
+
+/**
+* @brief Recibe un valor entero
+* @param socket el socket desde el cual se recibe el mensaje
+* @param valor_recibido donde se guardara el valor recibido para luego evaluar
+* @return 0 si se recibio correctamente, -1 si hay error.
+*/
+int recibir_entero(int socket, int* valor_recibido);
+
 /***********************************************************************************************************************/
 /***                                           FUNCIONES DE MANEJO DE BUFFER                                         ***/
 /***********************************************************************************************************************/
@@ -226,6 +242,23 @@ t_buffer* serializar_asignacion_query(t_asignacion_query* asignacion);
  * @note La estructura debe ser liberada por el que la recibe
  */
 t_asignacion_query* deserializar_asignacion_query(t_buffer* buffer);
+
+/**
+ * @brief Serializa un t_tam_pagina 
+ * @param tam_pagina_struct el *t_tam_pagina (struct con el tamaño de página/bloque) a serializar
+ * @return el *t_buffer resultante
+ * @note Utilizado en el handshake entre worker y storage
+ */
+t_buffer* serializar_tam_pagina(t_tam_pagina* tam_pagina_struct);
+
+/**
+ * @brief Deserializa un t_tam_pagina 
+ * @param buffer el *t_buffer a deserializar
+ * @return el *t_tam_pagina (struct con el tamaño de página/bloque) resultante. 
+ * @note La estructura debe ser liberada por el que la recibe
+ * @note Utilizado en el handshake entre worker y storage
+ */
+t_tam_pagina* deserializar_tam_pagina(t_buffer* buffer);
 
 #endif
  

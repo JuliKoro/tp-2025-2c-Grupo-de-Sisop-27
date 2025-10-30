@@ -8,6 +8,7 @@
         "funciones.h": "c",
         "loggeo.h": "c",
         "master.h": "c",
-        "worker.h": "c"
+        "worker.h": "c",
+        "string.h": "c"
     }
 }

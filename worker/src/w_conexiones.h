@@ -86,4 +86,12 @@ void limpiarMemoriaMaster(t_handshake_worker_master* handshake);
  */
 void confirmarRecepcion (int socket_conexion);
 
+/**
+ * @brief Realiza el handshake entre worker y storage
+ * @param socket_storage el socket de conexion con storage
+ * @param id_worker el id del worker
+ * @return el *t_tam_pagina resultante
+ */
+t_tam_pagina* handshake_worker_storage(int socket_storage, int id_worker);
+
 #endif
