@@ -3,6 +3,15 @@
 int conexion_storage;
 int conexion_master;
 
+// SEMAFOROS MUTEX
+pthread_mutex_t mutex_registros;  // Protege: pc_actual, path_query, flags
+pthread_mutex_t mutex_memoria;    // Protege: acceso a memoria_interna
+
+// SEMAFOROS
+sem_t sem_query_asignada;    // Master señaliza que hay query nueva
+sem_t sem_query_terminada;   // Interpreter señaliza que terminó
+
+
 worker_conf* worker_configs;
 t_asignacion_query* query_asignada;
 
@@ -169,6 +178,13 @@ int main(int argc, char* argv[]) {
     // Mostrar estado inicial para verificar
     mostrar_estado_memoria(memoria_worker);
 
+    // SEMAFOROS
+    // Inicializar semáforos
+    sem_init(&sem_query_asignada, 0, 0);   // Inicia en 0 (sin queries)
+    sem_init(&sem_query_terminada, 0, 1);  // Inicia en 1 (puede recibir)
+    pthread_mutex_init(&mutex_registros, NULL);
+    pthread_mutex_init(&mutex_memoria, NULL);
+
     // HILOS
     pthread_t thread_master, thread_query_interpreter;
 
@@ -178,11 +194,15 @@ int main(int argc, char* argv[]) {
     // Crear hilo para ejecutar el Query Interpreter
     pthread_create(&thread_query_interpreter, NULL, hilo_query_interpreter, NULL);
 
-    // SEMAFOROS
-
     // Esperar a que los hilos terminen (en este caso, no se espera porque son hilos de ejecución continua)
     pthread_join(thread_master, NULL);
     pthread_join(thread_query_interpreter, NULL);
+
+    // DESTRUIR SEMAFOROS
+    sem_destroy(&sem_query_asignada);
+    sem_destroy(&sem_query_terminada);
+    pthread_mutex_destroy(&mutex_registros);
+    pthread_mutex_destroy(&mutex_memoria);
 
     // CERRAR SOCKETS
     close(conexion_storage);
@@ -195,7 +215,7 @@ void* hilo_master(void* arg){
 
     while (1)
     {
-        // ASIGNACION DE QUERY
+        // RECIBO PAQUETE DEL MASTER
         t_paquete* paquete_recibido = recibir_paquete(conexion_master);
         if (paquete_recibido == NULL) {
             log_error(logger_worker, "Error al recibir paquete del Master.");
@@ -204,31 +224,60 @@ void* hilo_master(void* arg){
 
         switch (paquete_recibido->codigo_operacion)
         {
-            case OP_ASIGNAR_QUERY:
+            case OP_ASIGNAR_QUERY: // Cuando Master asigna una Query al Worker
+                log_debug(logger_worker, "Solicitud de ASIGNAR_QUERY recibida.");
                 // Chequeo explícito de query_en_ejecucion antes de asignar
                 if (query_en_ejecucion) {
                     log_warning(logger_worker, "Intento de asignar nueva Query mientras hay una activa. Esperando fin...");
                     // Esperar a que termine la actual (Master no debería hacer esto, pero por seguridad)
-                    //sem_wait(&sem_query_terminada);
-                    //log_info(logger_worker, "Query anterior terminada. Procediendo con nueva asignación.");
                 }
-
+                sem_wait(&sem_query_terminada); // Esperar a que se libere la ejecución
+                
                 // Procesar la asignación de la nueva Query (deserializacion)
                 t_asignacion_query* query_asignada = deserializar_asignacion_query(paquete_recibido->datos);
+
+                // Proteger acceso a registros
+                pthread_mutex_lock(&mutex_registros);
                 pc_actual = query_asignada->pc;
                 path_query = strdup(query_asignada->path_query); // Guardar el path de la query
-                //free(query_asignada->path_query);
+                query_en_ejecucion = true;
+                desalojar_query = false;
+                pthread_mutex_unlock(&mutex_registros);
 
-                // Actualizar estado (setear flags)
+                // Cual es la <QUERY_ID>?? La tengo que sumar al paquete que manda Master?
+                log_info(logger_worker, "## Query %d: Se recibe la Query. El path de operaciones es: %s", pc_actual, path_query);
+
+                // Señalizar que hay query lista
+                sem_post(&sem_query_asignada);
+
+                //free(query_asignada); // Revisar si combiene utilizar este struct o los registos por separado
 
                 break;
 
-            case OP_DESALOJAR_QUERY:
-                /* code */
+            case OP_DESALOJAR_QUERY: // Cuando Master ordean desalojar la Query actual al Worker
+                log_debug(logger_worker, "Solicitud de DESALOJAR_QUERY recibida.");
+
+                pthread_mutex_lock(&mutex_registros);
+                if (query_en_ejecucion) {
+                    desalojar_query = true; // Interpreter lo chequeará
+                } else {
+                    log_warning(logger_worker, "Se recibió desalojo pero no hay query en ejecución.");
+                }
+                pthread_mutex_unlock(&mutex_registros);
                 break;
 
-            case OP_FIN_QUERY:
-                /* code */
+            case OP_FIN_QUERY: // Si el Master cancela una query ("Desconexión de Query Control")
+                log_debug(logger_worker, "Solicitud de FIN_QUERY (cancelación) recibida.");
+                pthread_mutex_lock(&mutex_registros);
+                if (query_en_ejecucion) {
+                    desalojar_query = true; // Interpreter lo chequeará
+                    // mismo flag para forzar la detención
+                    // setear otro flag "fue_cancelada" para
+                    // diferenciar entre desalojo (pausa) y cancelación (fin).
+                } else {
+                    log_warning(logger_worker, "Se recibió cancelacion pero no hay query en ejecución.");
+                }
+                pthread_mutex_unlock(&mutex_registros);
                 break; 
         
             default:
@@ -238,13 +287,24 @@ void* hilo_master(void* arg){
 
         destruir_paquete(paquete_recibido);
     }
+    return NULL;
 }
 
 void* hilo_query_interpreter(void* arg){
 
     while (1)
     {
-        // PARSEAR Y EJECUTAR QUERY
+        // Esperar que haya una query asignada
+        sem_wait(&sem_query_asignada);
+        // Falta adaptar al ciclo de instruciones:
+        // Quiza hacer el loop de ejecucion aqui y preguntar por el desalojo, etc.
+        // Ejecutar query línea por línea
+        pthread_mutex_lock(&mutex_registros);
+        //query_interpreter(); // PARSEAR Y EJECUTAR QUERY
+        pthread_mutex_unlock(&mutex_registros);
+
+        sem_post(&sem_query_terminada);  // Ahora puede recibir otra
+        
     }
     
 }
