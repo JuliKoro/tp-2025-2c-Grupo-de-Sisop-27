@@ -82,9 +82,16 @@ void escribirBloque(int numeroBloque, void* datos, size_t tamanioDatos);
 /**
  * @brief Inicializa el t_bitarray, creando el archivo bitmap.bin en la ruta especificada y mapeandolo a memoria.
  * @param path la ruta donde se encuentra el archivo bitmap.bin
- * @return void
+ * @return void, lo carga en la variable global g_bitmap
  */
 void inicializarBitmap(char* path);
+
+/**
+ * @brief Carga el bitmap desde el archivo bitmap.bin en la ruta especificada y lo mapea a memoria.
+ * @param path la ruta donde se encuentra el archivo bitmap.bin
+ * @return void, lo carga en la variable global g_bitmap
+ */
+void cargarBitmap(char* path);
 
 /**
  * @brief Inicializa la variable t_config* g_hash_config con el archivo blocks_hash_index.config
@@ -117,4 +124,12 @@ void crearHardLink(char* nombreFile, char* nombreTag);
  * @return void
  */
 void inicializarPuntoMontaje(char* path);
+
+/**
+ * @brief Carga el punto de montaje existente
+ * @param path el path del punto de montaje
+ * @return void
+ */
+void cargarPuntoMontaje(char* path);
+
 #endif

@@ -234,6 +234,42 @@ void inicializarBitmap(char* path){
 
 }
 
+void cargarBitmap(char* path){
+    log_info(g_logger_storage, "Cargando bitmap desde %s", path);
+    char* bitmap_path = string_duplicate(path);
+    string_append(&bitmap_path, "/bitmap.bin");
+    size_t bitmapSize =( g_superblock_config ->cantidad_bloques + 7)/8; //Sumamos 7 para redondear hacia arriba al byte mas cercano. dividimos por 8 para obtener la cantidad de bytes necesarios.
+
+    log_info(g_logger_storage, "Abriendo el archivo %s para cargar el bitmap", bitmap_path);
+
+    int fd = open(bitmap_path, O_RDWR, 0666); 
+    if(fd == -1){
+        log_error(g_logger_storage, "Error CRITICO: No se pudo abrir el bitmap.bin en %s. ¿Está corrupto el FS?", bitmap_path);
+        free(bitmap_path);
+        return;
+    }
+
+    log_debug(g_logger_storage, "Mapeando el bitmap a memoria con mmap...");
+    void* bitmap_data = mmap(NULL, bitmapSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (bitmap_data == MAP_FAILED) {
+        log_error(g_logger_storage, "Error CRITICO: No se pudo mapear el bitmap a memoria. ¿Está corrupto el FS?");
+        close(fd);
+        free(bitmap_path);
+        return; // Error crítico
+    }
+    //Ya mapeamos, cerramos el fd
+    close(fd);
+
+    g_bitmap = bitarray_create_with_mode(bitmap_data, bitmapSize, LSB_FIRST);
+    log_info(g_logger_storage, "Bitmap mapeado en memoria con %zu bytes, estructura inicializada", bitmapSize);
+
+    mostrarBitmap();
+
+    free(bitmap_path);
+
+   
+}
+
 void inicializarHashIndex(){
     log_debug(g_logger_storage, "Inicializando el hash index...");
 
@@ -290,7 +326,11 @@ void escribirHashindex(int numeroBloque){
     pthread_mutex_unlock(&g_mutexHashIndex);
 
     log_info(g_logger_storage, "Hash index actualizado para el bloque %d: %s", numeroBloque, hashCalculado);
-
+    //Testing, despues tengo que borrar estas lineas, se hace al final del main
+    pthread_mutex_lock(&g_mutexHashIndex);
+    config_save(g_hash_config); 
+    pthread_mutex_unlock(&g_mutexHashIndex);
+    //Testing, despues tengo que borrar estas lineas, se hace al final del main
     free(hashCalculado);
     free(nombreBloqueStr);
 }
@@ -376,7 +416,8 @@ void inicializarPuntoMontaje(char* path){
     crearArchivo(blocks_hash_index_path,0);
     free(blocks_hash_index_path);
     
-    
+    //Inicializamos el hash index
+    inicializarHashIndex();
     
     log_info(g_logger_storage, "Creando directorios nativos en %s...", path);
     char* physical_blocks = string_duplicate(path);
@@ -455,5 +496,46 @@ void inicializarPuntoMontaje(char* path){
 
 }
 
+void cargarPuntoMontaje(char* path){
+    log_info(g_logger_storage, "Cargando punto de montaje desde %s", path);
+
+     struct stat st = {0};
+    //Nos fijamos si existe la ruta
+    if(stat(path, &st) != 0){
+        log_error(g_logger_storage, "El punto de montaje %s no existe. Correr modulo bajo FRESH START", path);
+        return;
+    }
+    
+    //Cargamos el superblock.config que fue copiado a nuestro FS
+    char* path_superblock = string_duplicate(g_storage_config->punto_montaje);
+    string_append(&path_superblock, "/");
+    string_append(&path_superblock, "superblock.config");
+    g_superblock_config = get_configs_superblock(path_superblock);
+    free(path_superblock);
+    if (g_superblock_config == NULL) {
+        log_error(g_logger_storage, "Error CRITICO: No se pudo leer 'superblock.config' desde el punto de montaje. FS corrupto.");
+        return; // Error
+    }
+    log_debug(g_logger_storage, "Superbloque cargado. FS_SIZE: %d, BLOCK_SIZE: %d, BLOCK_COUNT: %d",
+             g_superblock_config->fs_size,
+             g_superblock_config->block_size,
+             g_superblock_config->cantidad_bloques);
+             
+    //Inicializamos el hash index, la funcion es reutilizable para este caso
+    inicializarHashIndex();
+    if (g_hash_config == NULL) {
+        log_error(g_logger_storage, "Error CRITICO: No se pudo leer 'blocks_hash_index.config'. FS corrupto.");
+        return; // Error
+    }
+    //Cargamos el bitmap
+    cargarBitmap(path);
+    if (g_bitmap == NULL) {
+        log_error(g_logger_storage, "Error CRITICO: No se pudo leer 'bitmap.bin'. FS corrupto.");
+        return; // Error
+    }
 
 
+    log_info(g_logger_storage, "Punto de montaje cargado exitosamente desde %s", path);
+
+   
+}

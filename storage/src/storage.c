@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
 
     //Inicializamos el logger y el hash index config global para poder manipularlo en todo el archivo.
     g_logger_storage = iniciarLoggerStorage(g_storage_config->log_level);
-    inicializarHashIndex();
+    //inicializarHashIndex(); esto lo muevo a inicializarPuntoMontaje y a cargarPuntoMontaje
 
     if(socket_servidor == -1){
         log_error(g_logger_storage, "Error al iniciar el servidor en el puerto %s", puerto_escucha);
@@ -60,6 +60,9 @@ int main(int argc, char* argv[]) {
         log_debug(g_logger_storage, "Copiando superblock.config a %s", path_superblock);
         inicializarPuntoMontaje(g_storage_config->punto_montaje);
         copiarArchivo(argv[2], path_superblock);
+    } else {
+        log_debug(g_logger_storage, "No se realiza fresh start, se carga configuarion existente");
+        cargarPuntoMontaje(g_storage_config->punto_montaje);
     }
 
     
