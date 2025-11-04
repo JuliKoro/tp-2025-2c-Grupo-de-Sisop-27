@@ -1,108 +1,9 @@
 #include "operaciones.h"
 
-// int create(char* nombreFile, char* nombreTag){
-
-
-//     log_debug(g_logger_storage, "Creando archivo %s con tag %s", nombreFile, nombreTag);
-//     char* pathFile = string_new();
-//     string_append(&pathFile, g_storage_config->punto_montaje);
-//     string_append(&pathFile, "/files/");
-//     string_append(&pathFile, nombreFile);
-
-//     char* pathTag = string_duplicate(pathFile);
-//     string_append(&pathTag, "/");
-//     string_append(&pathTag, nombreTag);
-
-//     char* pathLogicalBlocks = string_duplicate(pathTag);
-//     string_append(&pathLogicalBlocks, "/logical_blocks");
-
-//     struct stat st = {0};
-//     //Nos fijamos si existe la ruta
-//     if(stat(pathFile, &st) == 0){
-//         log_info(g_logger_storage, "El archivo %s ya existe. Se procede a ver si existe el tag", pathFile);
-//         //Chequeo de existencia de tag
-//         if(stat(pathTag, &st) == 0){
-//             log_error(g_logger_storage, "El tag %s ya existe para el archivo %s. No se puede crear", nombreTag, nombreFile);
-//             free(pathFile);
-//             free(pathTag);
-//             free(pathLogicalBlocks);
-//             return -1;
-//         //Creacion del tag cuando no existe
-//         } else { 
-//             if(mkdir(pathTag, 0777) == -1){
-//                 log_error(g_logger_storage, "Error al crear el tag %s para el archivo %s", nombreTag, nombreFile);
-//                 free(pathFile);
-//                 free(pathTag);
-//                 free(pathLogicalBlocks);
-//                 return -1;
-//             } else {
-//                 log_info(g_logger_storage, "Tag %s creado exitosamente para el archivo %s", nombreTag, nombreFile);
-                
-                
-
-//                 if(mkdir(pathLogicalBlocks, 0777) == -1){
-//                     log_error(g_logger_storage, "Error al crear el directorio logical_blocks en %s", pathLogicalBlocks);
-//                     free(pathLogicalBlocks);
-//                     free(pathFile);
-//                     free(pathTag);
-//                     return -1;
-//                 } else {
-//                     log_info(g_logger_storage, "Directorio logical_blocks creado exitosamente en %s", pathLogicalBlocks);
-//                 }
-
-//                 string_append(&pathTag, "/metadata.config");
-
-//                 escribirMetadataConfig(pathTag, 0, NULL, 0, "WORK_IN_PROGRESS");
-
-//                 free(pathFile);
-//                 free(pathTag);
-//                 free(pathLogicalBlocks);
-//                 return 0;
-//             }
-
-//         }
-
-    //Creacion de file y tag cuando no existe
-//     } else {
-//         if (mkdir(pathFile, 0777) == -1){
-//             log_error(g_logger_storage, "Error al crear el archivo %s", nombreFile);
-//             free(pathFile);
-//             free(pathTag);
-//             return -1;
-//         } else {
-//             log_info(g_logger_storage, "Archivo %s creado exitosamente", nombreFile);
-//             if(mkdir(pathTag, 0777) == -1){
-//                 log_error(g_logger_storage, "Error al crear el tag %s para el archivo %s", nombreTag, nombreFile);
-//                 free(pathFile);
-//                 free(pathTag);
-//                 free(pathLogicalBlocks);
-//                 return -1;
-//             } else {
-//                 log_info(g_logger_storage, "Tag %s creado exitosamente para el archivo %s", nombreTag, nombreFile);
-//                 escribirMetadataConfig(pathTag, 0, NULL, 0, "WORK_IN_PROGRESS");
-//                 if(mkdir(pathLogicalBlocks, 0777) == -1){
-//                     log_error(g_logger_storage, "Error al crear el directorio logical_blocks en %s", pathLogicalBlocks);
-//                     free(pathLogicalBlocks);
-//                     free(pathFile);
-//                     free(pathTag);
-//                     return -1;
-//                 } else {
-//                     log_info(g_logger_storage, "Directorio logical_blocks creado exitosamente en %s", pathLogicalBlocks);
-                    
-//                 }
-
-//                 free(pathFile);
-//                 free(pathTag);
-//                 free(pathLogicalBlocks);
-//                 return 0;
-//             }
-//         }
-//     }
-//     return 0;
-// }
-
-int create(char* nombreFile, char* nombreTag){
-     log_info(g_logger_storage, "Iniciando operación CREATE para file: %s, tag: %s", nombreFile, nombreTag);
+int create(uint32_t query_id, char* nombreFile, char* nombreTag){
+    log_debug(g_logger_storage, "Durmiendo tiempo de retardo de operacion: %d ms", g_storage_config->retardo_operacion);
+    usleep(g_storage_config->retardo_operacion * 1000);
+    log_info(g_logger_storage, "QUERY ID: %d Iniciando operación CREATE para file: %s, tag: %s",query_id, nombreFile, nombreTag);
 
     char* pathFile = string_from_format("%s/files/%s", 
                                         g_storage_config->punto_montaje, 
@@ -129,7 +30,8 @@ int create(char* nombreFile, char* nombreTag){
             log_error(g_logger_storage, "Error al crear directorio %s: %s", pathFile, strerror(errno));
             goto cleanup; // Ir a la limpieza
         }
-        log_info(g_logger_storage, "Directorio %s creado exitosamente.", pathFile);
+        log_debug(g_logger_storage, "Directorio %s creado exitosamente.", pathFile);
+        log_info(g_logger_storage,"##<QUERY_ID %d> - File Creado <%s>:<%s>", query_id, nombreFile, nombreTag);
     } else {
         log_info(g_logger_storage, "El archivo %s ya existe. Se procede a ver si existe el tag", pathFile);
     }
@@ -145,7 +47,9 @@ int create(char* nombreFile, char* nombreTag){
             log_error(g_logger_storage, "Error al crear directorio de tag %s: %s", pathTag, strerror(errno));
             goto cleanup;
         }
-        log_info(g_logger_storage, "Tag %s creado exitosamente.", nombreTag);
+        log_debug(g_logger_storage, "Tag %s creado exitosamente.", nombreTag);
+        log_info(g_logger_storage,"##<QUERY_ID %d> - Tag creado <%s>:<%s>", query_id, nombreFile, nombreTag);
+
     }
 
     //Chequeo logical_blocks
@@ -172,5 +76,67 @@ int create(char* nombreFile, char* nombreTag){
     free(pathLogicalBlocks);
     free(pathMetadata);
     
+    return status;
+}
+
+int tag (uint32_t query_id,char* nombreFile, char* tagOrigen, char* tagDestino){
+    log_debug(g_logger_storage, "Durmiendo tiempo de retardo de operacion: %d ms", g_storage_config->retardo_operacion);
+    usleep(g_storage_config->retardo_operacion * 1000);
+
+    log_info(g_logger_storage, "QUERY ID: %d Iniciando operación TAG para file: %s, tagOrigen: %s, tagDestino: %s",query_id, nombreFile, tagOrigen, tagDestino);
+
+    char* pathOrigen = string_from_format("%s/files/%s/%s", 
+                                        g_storage_config->punto_montaje, 
+                                        nombreFile,
+                                        tagOrigen);
+
+    char* pathDestino = string_from_format("%s/files/%s/%s", 
+                                        g_storage_config->punto_montaje, 
+                                        nombreFile,
+                                        tagDestino);
+
+
+    int status = -1;
+    struct stat st = {0};
+
+    if( stat(pathOrigen, &st) == -1) {
+        log_error(g_logger_storage, "Error TAG: El tag origen %s no existe para el archivo %s.", tagOrigen, nombreFile);
+        goto cleanup;
+    }
+    if(stat(pathDestino, &st) == 0) {
+        log_error(g_logger_storage, "Error TAG: El tag destino %s ya existe para el archivo %s.", tagDestino, nombreFile);
+        goto cleanup;
+    } else {
+        char* comandoCopy = string_from_format("cp -r %s %s", pathOrigen, pathDestino);
+        int resultadoCopy = system(comandoCopy);
+        free(comandoCopy);
+        if (resultadoCopy != 0) {
+            log_error(g_logger_storage, "Error al copiar el tag de %s a %s para el archivo %s.", tagOrigen, tagDestino, nombreFile);
+            goto cleanup;  
+        } else {
+            log_info(g_logger_storage,"##<QUERY_ID %d> - Tag copiado de <%s> a <%s> para el file <%s>", query_id, tagOrigen, tagDestino, nombreFile);
+            char* pathMetadataDestino = string_from_format("%s/metadata.config", pathDestino);
+            t_config* metadataConfig = config_create(pathMetadataDestino);
+            if (metadataConfig == NULL) {
+                log_error(g_logger_storage, "Error al leer el metadata.config en %s despues del copy.", pathMetadataDestino);
+                free(pathMetadataDestino);
+                goto cleanup; 
+            } else {
+                config_set_value(metadataConfig, "ESTADO", "WORK_IN_PROGRESS");
+                config_save(metadataConfig);
+                config_destroy(metadataConfig);
+                free(pathMetadataDestino);
+                status = 0;
+                log_debug(g_logger_storage, "Operación TAG exitosa de %s a %s para el archivo %s.", tagOrigen, tagDestino, nombreFile);
+                log_info(g_logger_storage, "QUERY ID %d > - Tag creado %s:%s", query_id, nombreFile, tagDestino);
+            }
+        }
+
+
+    }
+    cleanup:
+    free(pathOrigen);
+    free(pathDestino);
+
     return status;
 }

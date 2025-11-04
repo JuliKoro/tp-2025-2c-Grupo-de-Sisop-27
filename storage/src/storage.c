@@ -68,14 +68,14 @@ int main(int argc, char* argv[]) {
     }
 
 
-    log_debug(g_logger_storage, "Testeo de operacion de create");
-    if(create("archivoUNO", "uwu") == 0){
+    log_debug(g_logger_storage, "Testeo de operacion de tag");
+    if(tag(69, "archivoUNO", "uwu","awa") == 0){
         log_info(g_logger_storage, "Operacion create exitosa para archivo1.txt con TAG_A");
     } else {
         log_error(g_logger_storage, "Operacion create fallida para archivo1.txt con TAG_A");
     }
 
-    log_debug(g_logger_storage, "Testeo de operacion de create");
+    log_debug(g_logger_storage, "Testeo de operacion de tag");
     
     while (1) {
         log_info(g_logger_storage, "Iniciando ciclo de espera de clientes");
