@@ -9,6 +9,7 @@
         "loggeo.h": "c",
         "master.h": "c",
         "worker.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "operaciones.h": "c"
     }
 }
