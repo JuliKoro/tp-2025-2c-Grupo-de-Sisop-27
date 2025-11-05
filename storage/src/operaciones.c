@@ -1,8 +1,57 @@
 #include "operaciones.h"
 
-int create(uint32_t query_id, char* nombreFile, char* nombreTag){
+void simularRetardoOperacion(){
     log_debug(g_logger_storage, "Durmiendo tiempo de retardo de operacion: %d ms", g_storage_config->retardo_operacion);
     usleep(g_storage_config->retardo_operacion * 1000);
+}
+
+void simularRetardoAccesoBloque(){
+    log_debug(g_logger_storage, "Durmiendo tiempo de retardo de acceso a bloque: %d ms", g_storage_config->retardo_acceso_bloque);
+    usleep(g_storage_config->retardo_acceso_bloque * 1000);
+}
+
+void* leerBloqueFisico(int bloqueFisico){
+    simularRetardoAccesoBloque();
+    log_debug(g_logger_storage, "Leyendo bloque fisico: %d", bloqueFisico);
+    char* pathBloque = string_from_format("%s/physical_blocks/block%04d.dat", g_storage_config->punto_montaje, bloqueFisico);
+
+    int fd = open (pathBloque, O_RDONLY);
+    if (fd == -1) {
+        log_error(g_logger_storage, "Error al abrir el bloque fisico %d en %s: %s", bloqueFisico, pathBloque, strerror(errno));
+        free(pathBloque);
+        return NULL;
+    } 
+    size_t tamanioBloque = g_superblock_config->block_size;
+    void* buffer = malloc(tamanioBloque);
+    if (buffer == NULL) {
+    log_error(g_logger_storage, "Error de malloc al reservar memoria para el buffer %d", bloqueFisico);
+    close(fd);
+    free(pathBloque);
+    return NULL;
+    }
+    
+    ssize_t bytesLeidos = read(fd, buffer, tamanioBloque);
+
+    if (bytesLeidos == -1){
+        log_error(g_logger_storage, "Error al leer bytes desde el bloque fisico %d en %s: %s", bloqueFisico, pathBloque, strerror(errno));
+        free(buffer);
+        close(fd);
+        free(pathBloque);
+        return NULL;
+    }
+    if ((size_t)bytesLeidos < tamanioBloque) {
+        log_warning(g_logger_storage, "Lectura corta en bloque %d. Leídos %zd de %zu", bloqueFisico, bytesLeidos, tamanioBloque);
+    }
+
+    close(fd);
+    free(pathBloque);
+
+    log_debug(g_logger_storage, "Bloque físico %d leído exitosamente.", bloqueFisico);
+    return buffer;
+}
+
+int create(uint32_t query_id, char* nombreFile, char* nombreTag){
+    simularRetardoOperacion();
     log_info(g_logger_storage, "QUERY ID: %d Iniciando operación CREATE para file: %s, tag: %s",query_id, nombreFile, nombreTag);
 
     char* pathFile = string_from_format("%s/files/%s", 
@@ -80,9 +129,7 @@ int create(uint32_t query_id, char* nombreFile, char* nombreTag){
 }
 
 int tag (uint32_t query_id,char* nombreFile, char* tagOrigen, char* tagDestino){
-    log_debug(g_logger_storage, "Durmiendo tiempo de retardo de operacion: %d ms", g_storage_config->retardo_operacion);
-    usleep(g_storage_config->retardo_operacion * 1000);
-
+    simularRetardoOperacion();
     log_info(g_logger_storage, "QUERY ID: %d Iniciando operación TAG para file: %s, tagOrigen: %s, tagDestino: %s",query_id, nombreFile, tagOrigen, tagDestino);
 
     char* pathOrigen = string_from_format("%s/files/%s/%s", 
@@ -139,4 +186,75 @@ int tag (uint32_t query_id,char* nombreFile, char* tagOrigen, char* tagDestino){
     free(pathDestino);
 
     return status;
+}
+
+void* leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLogico){
+    simularRetardoOperacion();
+
+    log_debug(g_logger_storage, "QUERY ID: %d Iniciando operación READ para file: %s, tag: %s, bloqueLogico: %d",query_id, nombreFile, nombreTag, bloqueLogico);
+
+    char* pathFile = string_from_format("%s/files/%s", 
+                                        g_storage_config->punto_montaje, 
+                                        nombreFile);
+
+    char* pathTag = string_from_format("%s/%s", 
+                                       pathFile, 
+                                       nombreTag);
+
+    struct stat st = {0};
+    void* buffer = NULL;
+    char** bloquesLogicos = NULL;
+    t_config* metadataConfig = NULL;
+
+
+    if(stat(pathFile, &st) == -1) {
+        log_error(g_logger_storage, "Error READ: El archivo %s no existe.", nombreFile);
+        goto cleanup;
+    }
+
+    if(stat(pathTag, &st) == -1) {
+        log_error(g_logger_storage, "Error READ: El tag %s no existe para el archivo %s.", nombreTag, nombreFile);
+        goto cleanup;
+
+    }
+    char* pathMetadata = string_from_format("%s/metadata.config", pathTag);
+    metadataConfig = config_create(pathMetadata);
+    if (metadataConfig == NULL) {
+        log_error(g_logger_storage, "Error READ: No se pudo leer el metadata.config en %s.", pathTag);
+        goto cleanup;
+    }
+
+    bloquesLogicos = config_get_array_value(metadataConfig, "BLOCKS");
+    if(bloqueLogico>=string_array_size(bloquesLogicos)){
+        log_error(g_logger_storage, "[QUERY %d] Error READ: Lectura fuera de limite. Bloque lógico %d no existe (Total: %d).", query_id, bloqueLogico, string_array_size(bloquesLogicos));
+        goto cleanup;    
+    }
+    int bloqueFisico = atoi(bloquesLogicos[bloqueLogico]);
+    buffer = leerBloqueFisico(bloqueFisico);
+
+    if (buffer == NULL) {
+        log_error(g_logger_storage, "Error READ: No se pudo leer el bloque físico %d para el bloque lógico %d en el tag %s del archivo %s.", bloqueFisico, bloqueLogico, nombreTag, nombreFile);
+        goto cleanup;
+    }
+
+    log_info(g_logger_storage, "##<%d> - Bloque Lógico Leído %s:%s - Número de Bloque: %d", query_id, nombreFile, nombreTag, bloqueLogico);
+
+    string_array_destroy(bloquesLogicos);
+    config_destroy(metadataConfig);
+    free(pathFile);
+    free(pathTag);
+    free(pathMetadata);
+
+    return buffer;
+
+    cleanup:
+    if (buffer) free(buffer);
+    if (bloquesLogicos) string_array_destroy(bloquesLogicos);
+    if (metadataConfig) config_destroy(metadataConfig);
+    free(pathFile);
+    free(pathTag);
+    free(pathMetadata);
+    
+    return NULL;
+    
 }
