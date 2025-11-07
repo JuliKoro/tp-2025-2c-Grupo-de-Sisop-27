@@ -244,8 +244,7 @@ void* hilo_master(void* arg){
                 desalojar_query = false;
                 pthread_mutex_unlock(&mutex_registros);
 
-                // Cual es la <QUERY_ID>?? La tengo que sumar al paquete que manda Master?
-                log_info(logger_worker, "## Query %d: Se recibe la Query. El path de operaciones es: %s", pc_actual, path_query);
+                log_info(logger_worker, "## Query %d: Se recibe la Query. El path de operaciones es: %s", query_asignada->id_query, path_query);
 
                 // Señalizar que hay query lista
                 sem_post(&sem_query_asignada);
