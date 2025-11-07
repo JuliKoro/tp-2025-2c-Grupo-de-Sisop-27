@@ -94,11 +94,13 @@ typedef struct {
 
 /**
  * @brief Estructura para la asigancion de una nueva query
+ * @param id_query el ID de la query
  * @param path_query el path de la query - char*
  * @param pc el valor inicial del program counter - uint32_t
  * @note Utilizado para caundo el master asigna una nueva query al worker
  */
 typedef struct {
+    uint32_t id_query;   // ID de la query
     char* path_query;  // PATH (string, serializado con longitud)
     uint32_t pc;       // PC (binario, 4 bytes)
 } t_asignacion_query;

@@ -409,9 +409,10 @@ t_handshake_worker_master* deserializar_handshake_worker_master(t_buffer *buffer
 }
 
 t_buffer* serializar_asignacion_query(t_asignacion_query* asignacion){
-    uint32_t tamanio_buffer = sizeof(uint32_t) + strlen(asignacion->path_query) + sizeof(uint32_t);
+    uint32_t tamanio_buffer = 3 * sizeof(uint32_t) + strlen(asignacion->path_query);
     t_buffer* buffer = crear_buffer(tamanio_buffer);
     buffer_add_string(buffer, strlen(asignacion->path_query), asignacion->path_query);
+    buffer_add_uint32(buffer, asignacion->id_query);
     buffer_add_uint32(buffer, asignacion->pc);
     return buffer;
 }
@@ -419,6 +420,7 @@ t_buffer* serializar_asignacion_query(t_asignacion_query* asignacion){
 t_asignacion_query* deserializar_asignacion_query(t_buffer* buffer){
     t_asignacion_query* asignacion = malloc(sizeof(t_asignacion_query));
     asignacion->path_query = buffer_read_string(buffer);
+    asignacion->id_query = buffer_read_uint32(buffer);
     asignacion->pc = buffer_read_uint32(buffer);
     return asignacion;
 }
