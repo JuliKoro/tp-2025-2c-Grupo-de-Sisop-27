@@ -29,13 +29,10 @@
 
 #include <commons/string.h>
 
-#include <utils/hello.h>
-#include <utils/configs.h>
-#include <utils/mensajeria.h>
-
 #include "w_conexiones.h"
 #include "registros.h"
 #include "estructuras.h"
+#include "query_interpreter.h"
 
 /**
  * @brief Inicializa el módulo Worker

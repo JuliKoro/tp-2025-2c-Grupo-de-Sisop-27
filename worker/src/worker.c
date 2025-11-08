@@ -13,17 +13,18 @@ sem_t sem_query_terminada;   // Interpreter señaliza que terminó
 
 
 worker_conf* worker_configs;
-t_asignacion_query* query_asignada;
+t_asignacion_query* query; // struct global para la query actual asignada
 
 t_log* logger_worker = NULL;
 
 uint32_t id_worker; //La hice global para que se pueda usar en el hilo master
 
-// Definición de registros y flags (declarados en registros.h)
+// REGISTROS Y FLAGS (declarados en registros.h)
 uint32_t pc_actual = 0;
 char* path_query = NULL;
-bool query_en_ejecucion = false;
-bool desalojar_query = false;
+uint32_t id_query = 0;
+volatile bool query_en_ejecucion = false;
+volatile bool desalojar_query = false;
 
 //--------- Ce estuvo aqui, hello ---------
 // Variable global para la memoria
@@ -232,25 +233,24 @@ void* hilo_master(void* arg){
                     // Esperar a que termine la actual (Master no debería hacer esto, pero por seguridad)
                 }
                 sem_wait(&sem_query_terminada); // Esperar a que se libere la ejecución
-                
-                // Procesar la asignación de la nueva Query (deserializacion)
-                t_asignacion_query* query_asignada = deserializar_asignacion_query(paquete_recibido->datos);
 
                 // Proteger acceso a registros
                 pthread_mutex_lock(&mutex_registros);
-                pc_actual = query_asignada->pc;
-                path_query = strdup(query_asignada->path_query); // Guardar el path de la query
+                // Procesar la asignación de la nueva Query (deserializacion)
+                t_asignacion_query* query_asinada = deserializar_asignacion_query(paquete_recibido->datos);
+                // Actualizar registros globales
+                id_query = query_asinada->id_query;
+                path_query = strdup(query_asinada->path_query);
+                pc_actual = query_asinada->pc;
                 query_en_ejecucion = true;
                 desalojar_query = false;
                 pthread_mutex_unlock(&mutex_registros);
 
-                log_info(logger_worker, "## Query %d: Se recibe la Query. El path de operaciones es: %s", query_asignada->id_query, path_query);
+                log_info(logger_worker, "## Query %d: Se recibe la Query. El path de operaciones es: %s", id_query, path_query);
 
                 // Señalizar que hay query lista
                 sem_post(&sem_query_asignada);
-
-                //free(query_asignada); // Revisar si combiene utilizar este struct o los registos por separado
-
+                
                 break;
 
             case OP_DESALOJAR_QUERY: // Cuando Master ordean desalojar la Query actual al Worker
@@ -263,6 +263,9 @@ void* hilo_master(void* arg){
                     log_warning(logger_worker, "Se recibió desalojo pero no hay query en ejecución.");
                 }
                 pthread_mutex_unlock(&mutex_registros);
+
+                free(query_asinada);
+
                 break;
 
             case OP_FIN_QUERY: // Si el Master cancela una query ("Desconexión de Query Control")
@@ -295,17 +298,55 @@ void* hilo_query_interpreter(void* arg){
     {
         // Esperar que haya una query asignada
         sem_wait(&sem_query_asignada);
-        // Falta adaptar al ciclo de instruciones:
-        // Quiza hacer el loop de ejecucion aqui y preguntar por el desalojo, etc.
-        // Ejecutar query línea por línea
-        pthread_mutex_lock(&mutex_registros);
-        //query_interpreter(); // PARSEAR Y EJECUTAR QUERY
-        pthread_mutex_unlock(&mutex_registros);
-
-        sem_post(&sem_query_terminada);  // Ahora puede recibir otra
         
+        log_debug(logger_worker, "Query Interpreter: Iniciando ejecución de query");
+        
+        
+        // Ejecutar el query interpreter (ciclo de instrucciones)
+        t_resultado_ejecucion resultado = query_interpreter();
+        
+        // Procesar el resultado de la ejecución
+        
+        switch (resultado) {
+            case EXEC_OK:
+                log_info(logger_worker, "Query %d finalizada exitosamente", query->id_query);
+                // TODO: Notificar al Master que la query terminó correctamente
+                break;
+                
+            case EXEC_DESALOJO:
+                log_info(logger_worker, "Query %d desalojada. PC actual: %d", query->id_query, pc_actual);
+                // TODO: Enviar contexto (PC) al Master para reanudación posterior
+                // TODO: Hacer FLUSH de todas las páginas modificadas
+                break;
+                
+            case EXEC_ERROR:
+                log_error(logger_worker, "Query %d terminó con error", query->id_query);
+                // TODO: Notificar al Master del error
+                break;
+                
+            case EXEC_FIN_QUERY:
+                log_info(logger_worker, "Query %d ejecutó instrucción END", query->id_query);
+                // TODO: Notificar al Master que la query terminó
+                break;
+        }
+        
+        pthread_mutex_lock(&mutex_registros);
+        // Limpiar estado
+        query_en_ejecucion = false;
+        desalojar_query = false;
+        if (path_query != NULL) {
+            free(path_query);
+            path_query = NULL;
+        }
+        pthread_mutex_unlock(&mutex_registros);
+        
+        // Señalizar que terminó y puede recibir otra query
+        sem_post(&sem_query_terminada);
+        
+        log_debug(logger_worker, "Query Interpreter: Listo para recibir nueva query");
     }
     
+    return NULL;
 }
 
 void inicializacion_worker(char* nombre_config, char* id_worker_str){

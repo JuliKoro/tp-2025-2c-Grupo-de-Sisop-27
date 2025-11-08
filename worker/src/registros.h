@@ -29,7 +29,20 @@
 #include <string.h>
 #include <stddef.h>
 
+#include <utils/estructuras.h>
+
 // REGISTROS
+
+/**
+ * @brief Variable global para la asignación de la Query actual
+ * 
+ * Estructura que contiene la información de la query asignada al Worker,
+ * incluyendo su ID, path y PC actual.
+ * 
+ * @note Si se usan hilos, hay que proteger la variable con mutex
+ */
+extern t_asignacion_query* query;
+
 /**
  * @brief Variable global para el PC (Program Counter)
  * 
@@ -51,6 +64,16 @@ extern uint32_t pc_actual;
  */
 extern char* path_query;
 
+/**
+ * @brief Variable global para el ID de la Query actual
+ * 
+ * Registro que almacena el identificador único de la query que está siendo
+ * ejecutada actualmente.
+ * 
+ * @note Si se usan hilos, hay que proteger la variable con mutex
+ */
+extern uint32_t id_query;
+
 // FLAGS
 /**
  * @brief Flag que indica si hay una query en ejecución
@@ -61,7 +84,7 @@ extern char* path_query;
  * 
  * @note Debe ser protegida con mutex en entornos multihilo
  */
-extern bool query_en_ejecucion;
+extern volatile bool query_en_ejecucion;
 
 /**
  * @brief Flag para solicitar el desalojo de la query actual
@@ -72,6 +95,6 @@ extern bool query_en_ejecucion;
  * 
  * @note Debe ser protegida con mutex en entornos multihilo
  */
-extern bool desalojar_query;
+extern volatile bool desalojar_query;
 
 #endif
