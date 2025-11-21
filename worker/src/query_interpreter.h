@@ -112,10 +112,9 @@ t_resultado_ejecucion query_interpreter();
  * Lee la línea correspondiente al PC actual del archivo de query.
  * 
  * @param archivo Archivo de query abierto
- * @param pc Número de línea a leer (Program Counter)
  * @return String con la instrucción o NULL si hay error
  */
-char* fetch_instruction(FILE* archivo, uint32_t pc);
+char* fetch_instruction(FILE* archivo);
 
 /**
  * @brief Parsea una instrucción en string a estructura t_instruccion

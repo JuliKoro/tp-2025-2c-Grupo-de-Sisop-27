@@ -22,6 +22,7 @@ CC=gcc
 AR=ar
 ARFLAGS=rcs
 MAKE=make --no-print-directory
+CFLAGS = -Wall -Wextra -fdiagnostics-color=always
 
 # Set prerrequisites
 SRCS_C += $(shell find src -iname "*.c")

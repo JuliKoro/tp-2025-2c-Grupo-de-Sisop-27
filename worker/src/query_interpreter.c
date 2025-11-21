@@ -36,14 +36,13 @@ t_resultado_ejecucion query_interpreter() {
         }
         
         // FETCH: Obtener la instrucción actual
-        char* instruccion_str = fetch_instruction(archivo, pc_actual);
+        char* instruccion_str = fetch_instruction(archivo);
         if (instruccion_str == NULL) {
             log_error(logger_worker, "Error al hacer fetch de la instrucción en PC: %d", pc_actual);
             resultado = EXEC_ERROR;
             break;
         }
         
-        // Log obligatorio: FETCH
         log_info(logger_worker, "## Query %d: FETCH - Program Counter: %d - %s", 
                  id_query, pc_actual, instruccion_str);
         
@@ -98,18 +97,18 @@ t_resultado_ejecucion query_interpreter() {
 // FETCH - DECODE - EXECUTE
 // ============================================================================
 
-char* fetch_instruction(FILE* archivo, uint32_t pc) {
+char* fetch_instruction(FILE* archivo) {
     // Volver al inicio del archivo
     rewind(archivo);
-    
+
     char* linea = NULL;
     size_t len = 0;
     ssize_t read;
     uint32_t linea_actual = 0;
-    
+
     // Leer hasta llegar a la línea del PC
     while ((read = getline(&linea, &len, archivo)) != -1) {
-        if (linea_actual == pc) {
+        if (linea_actual == pc_actual) {
             // Eliminar el salto de línea al final
             if (linea[read - 1] == '\n') {
                 linea[read - 1] = '\0';
@@ -118,7 +117,7 @@ char* fetch_instruction(FILE* archivo, uint32_t pc) {
         }
         linea_actual++;
     }
-    
+
     // No se encontró la línea
     if (linea != NULL) {
         free(linea);
@@ -141,7 +140,7 @@ t_instruccion* parse_instruction(char* instruccion_str) {
     memset(inst, 0, sizeof(t_instruccion));
     inst->instruccion_raw = strdup(instruccion_str);
     
-    // Dividir la instrucción en tokens usando commons
+    // Dividir la instrucción en tokens
     char** tokens = string_split(instruccion_str, " ");
     if (tokens == NULL || tokens[0] == NULL) {
         destruir_instruccion(inst);
@@ -214,6 +213,8 @@ t_instruccion* parse_instruction(char* instruccion_str) {
     string_iterate_lines(tokens, (void*)free);
     free(tokens);
     
+    log_debug(logger_worker, "Instrucción parseada: Tipo=%s, Raw=%s", 
+              tipo_instruccion_to_string(inst->tipo), inst->instruccion_raw);
     return inst;
 }
 
@@ -453,32 +454,41 @@ bool split_file_tag(char* file_tag, char** file_name, char** tag_name) {
     if (file_tag == NULL) {
         return false;
     }
-    
-    // Buscar el separador ':'
-    char* separador = strchr(file_tag, ':');
-    if (separador == NULL) {
+
+    // Usar string_split de commons para dividir por ':'
+    char** tokens = string_split(file_tag, ":");
+    if (tokens == NULL || tokens[0] == NULL || tokens[1] == NULL) {
+        // Liberar tokens si fueron creados
+        if (tokens != NULL) {
+            string_iterate_lines(tokens, (void*)free);
+            free(tokens);
+        }
         return false;
     }
-    
-    // Calcular longitudes
-    size_t len_file = separador - file_tag;
-    size_t len_tag = strlen(separador + 1);
-    
-    // Asignar memoria y copiar
-    *file_name = malloc(len_file + 1);
-    *tag_name = malloc(len_tag + 1);
-    
+
+    // Verificar que no haya más de 2 tokens (solo file:tag)
+    if (tokens[2] != NULL) {
+        string_iterate_lines(tokens, (void*)free);
+        free(tokens);
+        return false;
+    }
+
+    // Asignar memoria y copiar los componentes
+    *file_name = strdup(tokens[0]);
+    *tag_name = strdup(tokens[1]);
+
     if (*file_name == NULL || *tag_name == NULL) {
         if (*file_name) free(*file_name);
         if (*tag_name) free(*tag_name);
+        string_iterate_lines(tokens, (void*)free);
+        free(tokens);
         return false;
     }
-    
-    strncpy(*file_name, file_tag, len_file);
-    (*file_name)[len_file] = '\0';
-    
-    strcpy(*tag_name, separador + 1);
-    
+
+    // Liberar tokens
+    string_iterate_lines(tokens, (void*)free);
+    free(tokens);
+
     return true;
 }
 

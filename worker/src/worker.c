@@ -11,7 +11,6 @@ pthread_mutex_t mutex_memoria;    // Protege: acceso a memoria_interna
 sem_t sem_query_asignada;    // Master señaliza que hay query nueva
 sem_t sem_query_terminada;   // Interpreter señaliza que terminó
 
-
 worker_conf* worker_configs;
 
 t_log* logger_worker = NULL;
