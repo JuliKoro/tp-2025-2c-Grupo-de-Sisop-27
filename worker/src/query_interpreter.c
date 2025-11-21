@@ -6,7 +6,6 @@ extern worker_conf* worker_configs;
 extern int conexion_storage;
 extern int conexion_master;
 extern uint32_t id_worker;
-extern t_asignacion_query* query;
 
 // ============================================================================
 // FUNCIÓN PRINCIPAL DEL INTERPRETER
@@ -331,7 +330,7 @@ bool execute_write(char* file_name, char* tag_name, uint32_t direccion_base, cha
     
     // Log obligatorio de escritura en memoria
     log_info(logger_worker, "Query %d: Acción: ESCRIBIR - Dirección Física: %d - Valor: %s",
-             query->id_query, direccion_base, contenido);
+             id_query, direccion_base, contenido);
     
     if (worker_configs->retardo_memoria > 0) {
         usleep(worker_configs->retardo_memoria * 1000);
@@ -360,7 +359,7 @@ bool execute_read(char* file_name, char* tag_name, uint32_t direccion_base, uint
     
     // Log obligatorio de lectura en memoria
     log_info(logger_worker, "Query %d: Acción: LEER - Dirección Física: %d - Valor: %s",
-             query->id_query, direccion_base, contenido_leido);
+             id_query, direccion_base, contenido_leido);
     
     // TODO: Enviar contenido leído al Master
     

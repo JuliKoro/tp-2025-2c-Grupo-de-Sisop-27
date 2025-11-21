@@ -34,16 +34,6 @@
 // REGISTROS
 
 /**
- * @brief Variable global para la asignación de la Query actual
- * 
- * Estructura que contiene la información de la query asignada al Worker,
- * incluyendo su ID, path y PC actual.
- * 
- * @note Si se usan hilos, hay que proteger la variable con mutex
- */
-extern t_asignacion_query* query;
-
-/**
  * @brief Variable global para el PC (Program Counter)
  * 
  * Registro que mantiene el contador de programa, indicando la próxima

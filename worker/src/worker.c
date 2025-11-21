@@ -13,7 +13,6 @@ sem_t sem_query_terminada;   // Interpreter señaliza que terminó
 
 
 worker_conf* worker_configs;
-t_asignacion_query* query; // struct global para la query actual asignada
 
 t_log* logger_worker = NULL;
 
@@ -234,14 +233,15 @@ void* hilo_master(void* arg){
                 }
                 sem_wait(&sem_query_terminada); // Esperar a que se libere la ejecución
 
+                // Procesar la asignación de la nueva Query (deserializacion)
+                t_asignacion_query* query_asignada = deserializar_asignacion_query(paquete_recibido->datos);
+
                 // Proteger acceso a registros
                 pthread_mutex_lock(&mutex_registros);
-                // Procesar la asignación de la nueva Query (deserializacion)
-                t_asignacion_query* query_asinada = deserializar_asignacion_query(paquete_recibido->datos);
                 // Actualizar registros globales
-                id_query = query_asinada->id_query;
-                path_query = strdup(query_asinada->path_query);
-                pc_actual = query_asinada->pc;
+                id_query = query_asignada->id_query;
+                path_query = strdup(query_asignada->path_query);
+                pc_actual = query_asignada->pc;
                 query_en_ejecucion = true;
                 desalojar_query = false;
                 pthread_mutex_unlock(&mutex_registros);
@@ -251,6 +251,8 @@ void* hilo_master(void* arg){
                 // Señalizar que hay query lista
                 sem_post(&sem_query_asignada);
                 
+                free(query_asignada->path_query);
+                free(query_asignada);
                 break;
 
             case OP_DESALOJAR_QUERY: // Cuando Master ordean desalojar la Query actual al Worker
@@ -264,7 +266,7 @@ void* hilo_master(void* arg){
                 }
                 pthread_mutex_unlock(&mutex_registros);
 
-                free(query_asinada);
+                free(query_asignada);
 
                 break;
 
@@ -309,23 +311,23 @@ void* hilo_query_interpreter(void* arg){
         
         switch (resultado) {
             case EXEC_OK:
-                log_info(logger_worker, "Query %d finalizada exitosamente", query->id_query);
+                log_info(logger_worker, "Query %d finalizada exitosamente", id_query);
                 // TODO: Notificar al Master que la query terminó correctamente
                 break;
                 
             case EXEC_DESALOJO:
-                log_info(logger_worker, "Query %d desalojada. PC actual: %d", query->id_query, pc_actual);
+                log_info(logger_worker, "Query %d desalojada. PC actual: %d", id_query, pc_actual);
                 // TODO: Enviar contexto (PC) al Master para reanudación posterior
                 // TODO: Hacer FLUSH de todas las páginas modificadas
                 break;
                 
             case EXEC_ERROR:
-                log_error(logger_worker, "Query %d terminó con error", query->id_query);
+                log_error(logger_worker, "Query %d terminó con error", id_query);
                 // TODO: Notificar al Master del error
                 break;
                 
             case EXEC_FIN_QUERY:
-                log_info(logger_worker, "Query %d ejecutó instrucción END", query->id_query);
+                log_info(logger_worker, "Query %d ejecutó instrucción END", id_query);
                 // TODO: Notificar al Master que la query terminó
                 break;
         }
