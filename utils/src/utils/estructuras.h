@@ -19,6 +19,8 @@ typedef enum {
     OP_ASIGNAR_QUERY, // Asignación de nueva Query
     OP_DESALOJAR_QUERY, // Solicitud de desalojo
     OP_FIN_QUERY, // Notificación de fin de Query
+    OP_SOL_INSTRUCCION, // Solicitud de instrucción (Worker->Storage)
+    OP_RESP_INSTRUCCION, // Respuesta de instrucción (Storage->Worker)
 } e_codigo_operacion;
 
 /**
