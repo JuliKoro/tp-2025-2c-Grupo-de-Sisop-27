@@ -185,20 +185,20 @@ void destruir_paquete(t_paquete *paquete);
 /***                                           FUNCIONES DE SERIALIZACION DE PAQUETES                                ***/
 /***********************************************************************************************************************/
 
+
 /**
-* @brief Serializa un t_handshake_qc_master
-* @param handshake el *t_handshake_qc_master a serializar
-* @return el *t_buffer resultante
-*/
+ * @brief Serializa un t_handshake_qc_master
+ * @param handshake el *t_handshake_qc_master a serializar
+ * @return el *t_buffer resultante
+ */
 t_buffer* serializar_handshake_qc_master(t_handshake_qc_master *handshake);
 
 /**
-* @brief Deserializa un t_handshake_qc_master
-* @param buffer el *t_buffer a deserializar
-* @return el *t_handshake_qc_master resultante. La estructura debe ser liberada por el que la recibe
-*/
+ * @brief Deserializa un t_handshake_qc_master
+ * @param buffer el *t_buffer a deserializar
+ * @return el *t_handshake_qc_master resultante. La estructura debe ser liberada por el que la recibe
+ */
 t_handshake_qc_master* deserializar_handshake_qc_master(t_buffer *buffer);
-
 
 /**
 * @brief Serializa un t_handshake_worker_storage
@@ -259,6 +259,79 @@ t_buffer* serializar_tam_pagina(t_tam_pagina* tam_pagina_struct);
  * @note Utilizado en el handshake entre worker y storage
  */
 t_tam_pagina* deserializar_tam_pagina(t_buffer* buffer);
+
+/**
+ * @brief Serializa una solicitud de instrucción para Worker->Storage
+ * @param solicitud Puntero a t_solicitud_instruccion a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_solicitud_instruccion(t_solicitud_instruccion* solicitud);
+
+/**
+ * @brief Deserializa un buffer recibido a una estructura t_solicitud_instruccion
+ * @param buffer Puntero a t_buffer con datos serializados
+ * @return t_solicitud_instruccion* Puntero a la estructura deserializada (liberar luego)
+ */
+t_solicitud_instruccion* deserializar_solicitud_instruccion(t_buffer* buffer);
+
+// ============================================================================
+// SERIALIZACION DE INSTRUCCIONES
+// ============================================================================
+/**
+ * @brief Serializa una instrucción CREATE
+ * @param create Puntero a t_create a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_create(t_create* create);
+
+/**
+ * @brief Serializa una instrucción TRUNCATE
+ * @param truncate Puntero a t_truncate a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_truncate(t_truncate* truncate);
+
+/**
+ * @brief Serializa una instrucción WRITE
+ * @param write Puntero a t_write a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_write(t_write* write);
+
+/**
+ * @brief Serializa una instrucción READ
+ * @param read Puntero a t_read a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_read(t_read* read);
+
+/**
+ * @brief Serializa una instrucción TAG
+ * @param tag Puntero a t_tag a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_tag(t_tag* tag);
+
+/**
+ * @brief Serializa una instrucción COMMIT
+ * @param commit Puntero a t_commit a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_commit(t_commit* commit);
+
+/**
+ * @brief Serializa una instrucción FLUSH
+ * @param flush Puntero a t_flush a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_flush(t_flush* flush);
+
+/**
+ * @brief Serializa una instrucción DELETE
+ * @param delete Puntero a t_delete a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_delete(t_delete* delete);
 
 #endif
  

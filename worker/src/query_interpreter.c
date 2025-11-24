@@ -231,23 +231,19 @@ t_resultado_ejecucion execute_instruction(t_instruccion* instruccion) {
             break;
             
         case INST_TRUNCATE:
-            resultado = execute_truncate(instruccion->file_name, instruccion->tag_name, 
-                                        instruccion->tamanio);
+            resultado = execute_truncate(instruccion->file_name, instruccion->tag_name, instruccion->tamanio);
             break;
             
         case INST_WRITE:
-            resultado = execute_write(instruccion->file_name, instruccion->tag_name,
-                                     instruccion->direccion_base, instruccion->contenido);
+            resultado = execute_write(instruccion->file_name, instruccion->tag_name, instruccion->direccion_base, instruccion->contenido);
             break;
             
         case INST_READ:
-            resultado = execute_read(instruccion->file_name, instruccion->tag_name,
-                                    instruccion->direccion_base, instruccion->tamanio);
+            resultado = execute_read(instruccion->file_name, instruccion->tag_name, instruccion->direccion_base, instruccion->tamanio);
             break;
             
         case INST_TAG:
-            resultado = execute_tag(instruccion->file_name, instruccion->tag_name,
-                                   instruccion->file_name_dest, instruccion->tag_name_dest);
+            resultado = execute_tag(instruccion->file_name, instruccion->tag_name, instruccion->file_name_dest, instruccion->tag_name_dest);
             break;
             
         case INST_COMMIT:

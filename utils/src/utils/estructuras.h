@@ -105,4 +105,131 @@ typedef struct {
     uint32_t pc;       // PC (binario, 4 bytes)
 } t_asignacion_query;
 
+// ESTRUCTURAS PARA SOLICITUD DE INSTRUCCIONES (WORKER - STORAGE)
+
+
+/***********************************************************************************************************************/
+/***                                   ESTRUCTURAS PARA INSTRUCCIONES WORKER->STORAGE                                    ***/
+/***********************************************************************************************************************/
+
+// ============================================================================
+// TIPOS DE INSTRUCCIONES
+// ============================================================================
+
+/**
+ * @brief Enumeración de los tipos de instrucciones soportadas
+ */
+typedef enum {
+    INST_CREATE,
+    INST_TRUNCATE,
+    INST_WRITE,
+    INST_READ,
+    INST_TAG,
+    INST_COMMIT,
+    INST_FLUSH,
+    INST_DELETE,
+    INST_END,
+    INST_UNKNOWN
+} t_tipo_instruccion;
+
+// ============================================================================
+// ESTRUCTURAS DE DATOS
+// ============================================================================
+
+/**
+ * @brief Estructura que representa una instrucción parseada
+ */
+typedef struct {
+    t_tipo_instruccion tipo;
+    char* file_name;           // Nombre del File
+    char* tag_name;            // Nombre del Tag
+    char* file_name_dest;      // Nombre del File destino (para TAG)
+    char* tag_name_dest;       // Nombre del Tag destino (para TAG)
+    uint32_t direccion_base;   // Dirección base (para WRITE/READ)
+    uint32_t tamanio;          // Tamaño (para TRUNCATE/READ)
+    char* contenido;           // Contenido (para WRITE)
+    char* instruccion_raw;     // Instrucción completa sin parsear
+} t_instruccion;
+
+/**
+ * Create: crear File:Tag
+ */
+typedef struct {
+    char* file_name;
+    char* tag_name;
+} t_create;
+
+/**
+ * Truncate: truncar archivo a tamaño
+ */
+typedef struct {
+    char* file_name;
+    char* tag_name;
+    uint32_t size;
+} t_truncate;
+
+/**
+ * Write: escribir contenido en un offset
+ */
+typedef struct {
+    char* file_name;
+    char* tag_name;
+    uint32_t offset;
+    uint32_t size;
+    void* content;  // puntero buffer de datos
+} t_write;
+
+/**
+ * Read: leer contenido desde offset tamaño
+ */
+typedef struct {
+    char* file_name;
+    char* tag_name;
+    uint32_t offset;
+    uint32_t size;
+} t_read;
+
+/**
+ * Tag: crear tag temporal (o permanente)
+ */
+typedef struct {
+    char* file_name_origen;
+    char* tag_name_origen;
+    char* file_name_destino;
+    char* tag_name_destino;
+} t_tag;
+
+/**
+ * Commit: confirmar un tag
+ */
+typedef struct {
+    char* file_name;
+    char* tag_name;
+} t_commit;
+
+/**
+ * Flush: enviar todos los cambios de File:Tag a FS
+ */
+typedef struct {
+    char* file_name;
+    char* tag_name;
+} t_flush;
+
+/**
+ * Delete: eliminar tag o file
+ */
+typedef struct {
+    char* file_name;
+    char* tag_name;
+} t_delete;
+
+/**
+ * @brief Estructura genérica para solicitud de instruccion serializada entre Worker y Storage.
+ */
+typedef struct {
+    t_tipo_instruccion tipo; /**< Tipo de instrucción a ejecutar */
+    uint32_t longitud_datos;         /**< Longitud en bytes del buffer de datos */
+    void* datos;                     /**< Puntero al buffer serializado con datos específicos */
+} t_solicitud_instruccion;
+
 #endif
