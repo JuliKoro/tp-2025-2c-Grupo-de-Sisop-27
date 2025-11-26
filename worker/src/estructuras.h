@@ -13,6 +13,7 @@
 typedef struct {
     int presente;           // 1 si está en memoria, 0 si no
     int modificado;         // 1 si fue modificado
+    int bit_uso;          // Bit de uso para CLOCK-M
     int marco;              // Número de marco físico asignado
     char* file_name;        // Nombre del file
     char* tag_name;         // Nombre del tag
@@ -22,12 +23,22 @@ typedef struct {
     //almacenar valores de tiempo del sistema. Estos valores se devuelven desde la función estándar de la biblioteca time()
 } entrada_tabla_paginas;
 
+
+typedef enum {
+    ALGORITMO_NO_DEFINIDO, // Valor 0
+    ALGORITMO_LRU,         // Valor 1
+    ALGORITMO_CLOCK_M      // Valor 2
+} t_algoritmo_reemplazo;
+
+
 // Estructura para la tabla de páginas completa
 typedef struct {
     entrada_tabla_paginas** entradas;
     int cantidad_entradas;
-    int algoritmo_reemplazo; // LRU o CLOCK-M (usar las constantes)
+    t_algoritmo_reemplazo algoritmo_reemplazo; // LRU o CLOCK-M (usar las constantes de la config)
+    int puntero_clock;      // Para CLOCK-M
 } tabla_paginas;
+
 
 // Estructura para la memoria interna
 typedef struct {

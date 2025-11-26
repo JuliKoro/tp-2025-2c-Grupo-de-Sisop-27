@@ -74,7 +74,7 @@ extern uint32_t id_query;
  * 
  * @note Debe ser protegida con mutex en entornos multihilo
  */
-extern volatile bool query_en_ejecucion;
+extern volatile bool query_en_ejecucion; // Flag: hay una Query activa?
 
 /**
  * @brief Flag para solicitar el desalojo de la query actual
@@ -85,6 +85,7 @@ extern volatile bool query_en_ejecucion;
  * 
  * @note Debe ser protegida con mutex en entornos multihilo
  */
-extern volatile bool desalojar_query;
 
+ extern volatile bool desalojar_query;             // Flag para desalojo (chequeada en interpreter)
+//bool hay_query_activa = false;            // Flag para saber si hay una query activa (chequeada en master)
 #endif
