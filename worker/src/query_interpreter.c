@@ -283,9 +283,11 @@ bool execute_create(char* file_name, char* tag_name) {
     }
     
     // TODO: Enviar solicitud CREATE al Storage
+    
     // Por ahora, solo log
     log_debug(logger_worker, "Ejecutando CREATE %s:%s", file_name, tag_name);
     
+    // Este retardo no va
     // Simular retardo de operación si está configurado
     if (worker_configs->retardo_memoria > 0) {
         usleep(worker_configs->retardo_memoria * 1000);

@@ -1,5 +1,5 @@
 #include "worker.h"
-#include "MI_y_AlgoSust.h" 
+#include "memoria_interna.h" 
 #include "registros.h" 
 
 int conexion_storage;
@@ -29,7 +29,7 @@ uint32_t id_query = 0;
 volatile bool query_en_ejecucion = false;
 volatile bool desalojar_query = false;
 
-// Nota: memoria_worker ya no se declara acá porque está en MI_y_AlgoSust.c y se accede via el header MI_y_AlgoSust.h
+// Nota: memoria_worker ya no se declara acá porque está en memoria_interna.c y se accede via el header memoria_interna.h
 
 int main(int argc, char* argv[]) {
     fprintf(stderr, "Worker ID: %s\n", argv[2]);

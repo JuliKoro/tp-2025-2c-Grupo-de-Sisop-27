@@ -1,4 +1,4 @@
-#include "MI_y_AlgoSust.h"
+#include "memoria_interna.h"
 
 // Definición de la variable global de memoria (aquí vive realmente)
 memoria_interna* memoria_worker = NULL;

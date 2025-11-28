@@ -1,11 +1,11 @@
-#ifndef MI_Y_ALGOSUST_H_
-#define MI_Y_ALGOSUST_H_
+#ifndef memoria_interna_H_
+#define memoria_interna_H_
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <commons/log.h>
-#include "estructuras.h"
+#include "tabla_de_paginas.h"
 #include <utils/configs.h> //para worker_conf
 
 // Variable global de memoria (declarada como extern para que worker.c la vea)

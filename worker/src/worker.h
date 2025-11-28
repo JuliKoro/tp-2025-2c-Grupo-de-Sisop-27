@@ -31,7 +31,7 @@
 
 #include "w_conexiones.h"
 #include "registros.h"
-#include "estructuras.h"
+#include "tabla_de_paginas.h"
 #include "query_interpreter.h"
 
 /**
