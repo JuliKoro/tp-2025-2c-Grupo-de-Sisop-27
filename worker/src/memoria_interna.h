@@ -1,5 +1,5 @@
-#ifndef memoria_interna_H_
-#define memoria_interna_H_
+#ifndef MEMORIA_INTERNA_H_
+#define MEMORIA_INTERNA_H_
 
 #include <stdio.h>
 #include <stdlib.h>

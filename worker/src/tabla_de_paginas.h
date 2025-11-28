@@ -1,5 +1,5 @@
-#ifndef W_ESTRUCTURAS_H_
-#define W_ESTRUCTURAS_H_
+#ifndef TABLA_DE_PAGINAS_H_
+#define TABLA_DE_PAGINAS_H_
 
 #include "worker.h"
 #include <time.h>

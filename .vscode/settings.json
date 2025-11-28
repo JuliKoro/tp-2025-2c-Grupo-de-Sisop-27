@@ -10,6 +10,9 @@
         "master.h": "c",
         "worker.h": "c",
         "string.h": "c",
-        "operaciones.h": "c"
+        "operaciones.h": "c",
+        "time.h": "c",
+        "stdio.h": "c",
+        "stdlib.h": "c"
     }
 }
