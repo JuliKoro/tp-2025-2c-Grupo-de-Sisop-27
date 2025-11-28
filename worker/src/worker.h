@@ -32,6 +32,7 @@
 #include "w_conexiones.h"
 #include "registros.h"
 #include "tabla_de_paginas.h"
+#include "memoria_interna.h" 
 #include "query_interpreter.h"
 
 /**

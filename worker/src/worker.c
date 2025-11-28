@@ -1,6 +1,4 @@
 #include "worker.h"
-#include "memoria_interna.h" 
-#include "registros.h" 
 
 int conexion_storage;
 int conexion_master;
@@ -53,14 +51,12 @@ int main(int argc, char* argv[]) {
     }
 
     // INICIO MEMORIA INTERNA
-    // inicio_memoria();
-
-    // INICIO MEMORIA INTERNA
     // -- CREACIÓN DE TABLAS DE PÁGINAS --
     // Inicializar memoria con tabla de páginas
     memoria_worker = inicializar_memoria(4096, 128); // Valores hardcodeados por ahora
     
     // Seteamos el algoritmo en la tabla (ahora que tenemos la memoria inicializada y el config cargado)
+    // NOTA: Esto podría moverse a inicializar_memoria, ya que worker_configs es global y extern
     if (memoria_worker && memoria_worker->tabla) {
         if (strcmp(worker_configs->algoritmo_reemplazo, "LRU") == 0) {
             memoria_worker->tabla->algoritmo_reemplazo = ALGORITMO_LRU;
