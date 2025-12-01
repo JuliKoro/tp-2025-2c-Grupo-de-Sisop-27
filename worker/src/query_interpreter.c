@@ -327,10 +327,6 @@ bool execute_truncate(char* file_name, char* tag_name, uint32_t tamanio) {
     // TODO: Enviar solicitud TRUNCATE al Storage
     log_debug(logger_worker, "Ejecutando TRUNCATE %s:%s %d", file_name, tag_name, tamanio);
     
-    if (worker_configs->retardo_memoria > 0) {
-        usleep(worker_configs->retardo_memoria * 1000);
-    }
-    
     return true;
 }
 
@@ -402,9 +398,6 @@ bool execute_tag(char* file_origen, char* tag_origen, char* file_destino, char* 
     log_debug(logger_worker, "Ejecutando TAG %s:%s %s:%s", 
               file_origen, tag_origen, file_destino, tag_destino);
     
-    if (worker_configs->retardo_memoria > 0) {
-        usleep(worker_configs->retardo_memoria * 1000);
-    }
     
     return true;
 }
@@ -417,10 +410,6 @@ bool execute_commit(char* file_name, char* tag_name) {
     
     // TODO: Enviar solicitud COMMIT al Storage
     log_debug(logger_worker, "Ejecutando COMMIT %s:%s", file_name, tag_name);
-    
-    if (worker_configs->retardo_memoria > 0) {
-        usleep(worker_configs->retardo_memoria * 1000);
-    }
     
     return true;
 }
@@ -453,10 +442,6 @@ bool execute_delete(char* file_name, char* tag_name) {
     
     // TODO: Enviar solicitud DELETE al Storage
     log_debug(logger_worker, "Ejecutando DELETE %s:%s", file_name, tag_name);
-    
-    if (worker_configs->retardo_memoria > 0) {
-        usleep(worker_configs->retardo_memoria * 1000);
-    }
     
     return true;
 }
