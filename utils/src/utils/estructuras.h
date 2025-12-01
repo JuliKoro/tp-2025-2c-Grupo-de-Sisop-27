@@ -21,6 +21,16 @@ typedef enum {
     OP_FIN_QUERY, // Notificación de fin de Query
     OP_SOL_INSTRUCCION, // Solicitud de instrucción (Worker->Storage)
     OP_RESP_INSTRUCCION, // Respuesta de instrucción (Storage->Worker)
+    //INST_CREATE,
+    //INST_TRUNCATE,
+    //INST_WRITE,
+    //INST_READ,
+    //INST_TAG,
+    //INST_COMMIT,
+    //INST_FLUSH,
+    //INST_DELETE,
+    //INST_END,
+    //INST_UNKNOWN
 } e_codigo_operacion;
 
 /**

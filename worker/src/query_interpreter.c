@@ -2,7 +2,7 @@
 
 // Variables externas
 extern t_log* logger_worker;
-extern worker_conf* worker_configs;
+//extern worker_conf* worker_configs;
 extern int conexion_storage;
 extern int conexion_master;
 extern uint32_t id_worker;
@@ -283,15 +283,11 @@ bool execute_create(char* file_name, char* tag_name) {
     }
     
     // TODO: Enviar solicitud CREATE al Storage
-    
+    /*t_paquete* paquete = malloc(sizeof(t_paquete));
+    paquete->codigo_operacion = INST_CREATE;
+    paquete->datos = serializar_create(file_name, tag_name);*/
     // Por ahora, solo log
     log_debug(logger_worker, "Ejecutando CREATE %s:%s", file_name, tag_name);
-    
-    // Este retardo no va
-    // Simular retardo de operación si está configurado
-    if (worker_configs->retardo_memoria > 0) {
-        usleep(worker_configs->retardo_memoria * 1000);
-    }
     
     return true;
 }

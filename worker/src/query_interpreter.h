@@ -36,6 +36,7 @@
 #include <commons/collections/list.h>
 
 #include "utils/estructuras.h"
+#include "utils/configs.h"
 
 #include "registros.h"
 #include "w_conexiones.h"

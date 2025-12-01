@@ -60,6 +60,11 @@ typedef struct {
     uint32_t tam_pagina; // Agregado para almacenar el tamaño de página recibido en el handshake
 } worker_conf;
 
+/**
+ * @brief Variable global para la configuración del módulo worker
+ */
+extern worker_conf* worker_configs;
+
 /** 
     * @brief Estructura para la configuracion del modulo storage
     * @param puerto_escucha - Puerto de escucha

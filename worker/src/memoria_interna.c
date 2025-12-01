@@ -5,9 +5,6 @@ memoria_interna* memoria_worker = NULL;
 
 // Referencias a variables externas definidas en worker.c
 extern t_log* logger_worker;
-extern worker_conf* worker_configs;
-
-//--------- Ce estuvo aqui, hello ---------
 
 memoria_interna* inicializar_memoria(int tam_memoria_config, int tam_pagina_hardcodeado) {
     memoria_interna* mem = malloc(sizeof(memoria_interna));
