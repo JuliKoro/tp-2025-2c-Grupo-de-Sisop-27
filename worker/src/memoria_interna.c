@@ -35,7 +35,7 @@ memoria_interna* inicializar_memoria() {
     }
     
 
-    // Inicializar array de marcos libres
+    // Inicializar array de marcos libres (1 = libre, 0 = ocupado)
     mem->marcos_libres = malloc(mem->cantidad_marcos * sizeof(int));
         if (!mem->marcos_libres) {
         fprintf(stderr, "Error: No se pudo asignar memoria para marcos_libres\n");
@@ -43,6 +43,7 @@ memoria_interna* inicializar_memoria() {
         free(mem);
     return NULL;
     }   
+
     // Inicializar todos los marcos como libres
     for (int i = 0; i < mem->cantidad_marcos; i++) {
         mem->marcos_libres[i] = 1; // 1 = libre, 0 = ocupado
@@ -62,10 +63,15 @@ memoria_interna* inicializar_memoria() {
     mem->tabla->entradas = NULL;
     mem->tabla->cantidad_entradas = 0;
     mem->tabla->puntero_clock = 0; // Inicializar puntero para CLOCK-M
-    //Aca se puede setear el algoritmo de reemplazo según la config si se quiere, pero lo dejo en NULL por ahora
-    // if (strcmp(worker_conf->algoritmo_reemplazo, "LRU") == 0)
-    mem->tabla->algoritmo_reemplazo = ALGORITMO_NO_DEFINIDO; 
     
+    // --- SELECCIÓN DEL ALGORITMO DE REEMPLAZO ---
+    if (strcmp(worker_configs->algoritmo_reemplazo, "LRU") == 0) {
+        mem->tabla->algoritmo_reemplazo = ALGORITMO_LRU;
+    } else if (strcmp(worker_configs->algoritmo_reemplazo, "CLOCK-M") == 0) {
+        mem->tabla->algoritmo_reemplazo = ALGORITMO_CLOCK_M;
+    } 
+
+
     fprintf(stderr, "Memoria interna inicializada:\n");
     fprintf(stderr, " - Tamaño memoria: %d bytes\n", mem->tam_memoria);
     fprintf(stderr, " - Tamaño página: %d bytes\n", mem->tam_pagina);
