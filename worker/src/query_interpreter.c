@@ -43,12 +43,12 @@ t_resultado_ejecucion query_interpreter() {
             break;
         }
         
-        log_info(logger_worker, "## Query %d: FETCH - Program Counter: %d - %s", 
-                 id_query, pc_actual, instruccion_str);
-        
         // DECODE: Parsear la instrucción
         t_instruccion* instruccion = parse_instruction(instruccion_str);
         free(instruccion_str);
+
+        log_info(logger_worker, "## Query %d: FETCH - Program Counter: %d - %s", 
+                 id_query, pc_actual, tipo_instruccion_to_string(instruccion->tipo));
         
         if (instruccion == NULL) {
             log_error(logger_worker, "Error al parsear la instrucción en PC: %d", pc_actual);
