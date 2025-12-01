@@ -288,33 +288,22 @@ bool execute_create(char* file_name, char* tag_name) {
     sol_create->file_name = file_name;
     sol_create->tag_name = tag_name;
 
-    t_buffer* buffer = serializar_create(sol_create);
-    t_paquete* paquete = empaquetar_buffer(OP_CREATE, buffer);
-
-    if (enviar_paquete(conexion_storage, paquete) == -1) {
+    if (!enviar_instruccion(OP_CREATE, sol_create)) {
         log_error(logger_worker, "Error al enviar solicitud CREATE al Storage");
-        free(sol_create);
-        free(paquete);
         return false;
     }
 
     int respuesta_storage;
     if (recibir_entero(conexion_storage, &respuesta_storage) == -1) {
         log_error(logger_worker, "Error al recibir respuesta CREATE del Storage");
-        free(sol_create);
-        free(paquete);
         return false;
     }
 
-    if (respuesta_storage != 0) { // 0 -> EXITO / 1 -> ERROR
+    if (respuesta_storage != 1) { // 1 -> EXITO / 0 -> ERROR
             log_error(logger_worker, "Error en la respuesta del Storage para CREATE");
-            free(sol_create);
-            free(paquete);
             return false;
     }
 
-    free(sol_create);
-    free(paquete);
     return true;
 }
 
@@ -324,9 +313,29 @@ bool execute_truncate(char* file_name, char* tag_name, uint32_t tamanio) {
         return false;
     }
     
-    // TODO: Enviar solicitud TRUNCATE al Storage
     log_debug(logger_worker, "Ejecutando TRUNCATE %s:%s %d", file_name, tag_name, tamanio);
     
+    t_truncate* sol_truncate = malloc(sizeof(t_truncate));
+    sol_truncate->file_name = file_name;
+    sol_truncate->tag_name = tag_name;
+    sol_truncate->size = tamanio;
+
+    if (!enviar_instruccion(OP_TRUNCATE, sol_truncate)) {
+        log_error(logger_worker, "Error al enviar solicitud TRUNCATE al Storage");
+        return false;
+    }
+
+    int respuesta_storage;
+    if (recibir_entero(conexion_storage, &respuesta_storage) == -1) {
+        log_error(logger_worker, "Error al recibir respuesta TRUNCATE del Storage");
+        return false;
+    }
+
+    if (respuesta_storage != 1) { // 1 -> EXITO / 0 -> ERROR
+            log_error(logger_worker, "Error en la respuesta del Storage para TRUNCATE");
+            return false;
+    }
+
     return true;
 }
 
@@ -394,11 +403,31 @@ bool execute_tag(char* file_origen, char* tag_origen, char* file_destino, char* 
         return false;
     }
     
-    // TODO: Enviar solicitud TAG al Storage
     log_debug(logger_worker, "Ejecutando TAG %s:%s %s:%s", 
               file_origen, tag_origen, file_destino, tag_destino);
     
-    
+    t_tag* sol_tag = malloc(sizeof(t_tag));
+    sol_tag->file_name_origen = file_origen;
+    sol_tag->tag_name_origen = tag_origen;
+    sol_tag->file_name_destino = file_destino;
+    sol_tag->tag_name_destino = tag_destino;
+
+    if (!enviar_instruccion(OP_TAG, sol_tag)) {
+        log_error(logger_worker, "Error al enviar solicitud TAG al Storage");
+        return false;
+    }
+
+    int respuesta_storage;
+    if (recibir_entero(conexion_storage, &respuesta_storage) == -1) {
+        log_error(logger_worker, "Error al recibir respuesta TAG del Storage");
+        return false;
+    }
+
+    if (respuesta_storage != 1) { // 1 -> EXITO / 0 -> ERROR
+            log_error(logger_worker, "Error en la respuesta del Storage para TAG");
+            return false;
+    }
+
     return true;
 }
 
@@ -408,8 +437,27 @@ bool execute_commit(char* file_name, char* tag_name) {
         return false;
     }
     
-    // TODO: Enviar solicitud COMMIT al Storage
     log_debug(logger_worker, "Ejecutando COMMIT %s:%s", file_name, tag_name);
+
+    t_commit* sol_commit = malloc(sizeof(t_commit));
+    sol_commit->file_name = file_name;
+    sol_commit->tag_name = tag_name;
+
+    if (!enviar_instruccion(OP_COMMIT, sol_commit)) {
+        log_error(logger_worker, "Error al enviar solicitud COMMIT al Storage");
+        return false;
+    }
+
+    int respuesta_storage;
+    if (recibir_entero(conexion_storage, &respuesta_storage) == -1) {
+        log_error(logger_worker, "Error al recibir respuesta COMMIT del Storage");
+        return false;
+    }
+
+    if (respuesta_storage != 1) { // 1 -> EXITO / 0 -> ERROR
+            log_error(logger_worker, "Error en la respuesta del Storage para COMMIT");
+            return false;
+    }
     
     return true;
 }
@@ -440,9 +488,28 @@ bool execute_delete(char* file_name, char* tag_name) {
         return false;
     }
     
-    // TODO: Enviar solicitud DELETE al Storage
     log_debug(logger_worker, "Ejecutando DELETE %s:%s", file_name, tag_name);
     
+    t_delete* sol_delete = malloc(sizeof(t_delete));
+    sol_delete->file_name = file_name;
+    sol_delete->tag_name = tag_name;
+
+    if (!enviar_instruccion(OP_DELETE, sol_delete)) {
+        log_error(logger_worker, "Error al enviar solicitud DELETE al Storage");
+        return false;
+    }
+
+    int respuesta_storage;
+    if (recibir_entero(conexion_storage, &respuesta_storage) == -1) {
+        log_error(logger_worker, "Error al recibir respuesta DELETE del Storage");
+        return false;
+    }
+
+    if (respuesta_storage != 1) { // 1 -> EXITO / 0 -> ERROR
+            log_error(logger_worker, "Error en la respuesta del Storage para DELETE");
+            return false;
+    }
+
     return true;
 }
 
@@ -450,6 +517,35 @@ bool execute_end() {
     log_info(logger_worker, "Ejecutando END - Finalizando query");
     return true;
 }
+
+bool enviar_instruccion(e_codigo_operacion cod_op, void* estructura_inst) {
+    t_buffer* buffer;
+    switch (cod_op) {
+        case OP_CREATE: buffer = serializar_create(estructura_inst); break;
+        case OP_TRUNCATE: buffer = serializar_truncate(estructura_inst); break;
+        case OP_WRITE: buffer = serializar_write(estructura_inst); break;
+        case OP_READ: buffer = serializar_read(estructura_inst); break;
+        case OP_TAG: buffer = serializar_tag(estructura_inst); break;
+        case OP_COMMIT: buffer = serializar_commit(estructura_inst); break;
+        case OP_FLUSH: buffer = serializar_flush(estructura_inst); break;
+        case OP_DELETE: buffer = serializar_delete(estructura_inst); break;
+        default:
+            log_error(logger_worker, "Operación inválida para enviar instrucción al Storage");
+            return false;
+    }
+    
+    t_paquete* paquete = empaquetar_buffer(cod_op, buffer);
+
+    if (enviar_paquete(conexion_storage, paquete) == -1) {
+        log_error(logger_worker, "Error al enviar solicitud de instruccion al Storage");
+        free(estructura_inst);
+        return false;
+    }
+
+    free(estructura_inst);
+    return true;
+}
+
 
 // ============================================================================
 // FUNCIONES AUXILIARES

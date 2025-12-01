@@ -219,6 +219,14 @@ bool execute_end();
 // ============================================================================
 
 /**
+ * @brief Envía una instrucción serializada al Storage
+ * @param cod_op Código de operación de la instrucción
+ * @param estructura_inst Estructura de la instrucción a enviar
+ * @return true si se envió correctamente
+ */
+bool enviar_instruccion(e_codigo_operacion cod_op, void* estructura_inst);
+
+/**
  * @brief Separa un string "FILE:TAG" en sus componentes
  * @param file_tag String en formato "FILE:TAG"
  * @param file_name Puntero donde guardar el nombre del File
