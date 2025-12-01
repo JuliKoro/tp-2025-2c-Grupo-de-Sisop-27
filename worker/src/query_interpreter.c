@@ -281,14 +281,40 @@ bool execute_create(char* file_name, char* tag_name) {
         log_error(logger_worker, "CREATE: Parámetros inválidos");
         return false;
     }
-    
-    // TODO: Enviar solicitud CREATE al Storage
-    /*t_paquete* paquete = malloc(sizeof(t_paquete));
-    paquete->codigo_operacion = INST_CREATE;
-    paquete->datos = serializar_create(file_name, tag_name);*/
-    // Por ahora, solo log
+
     log_debug(logger_worker, "Ejecutando CREATE %s:%s", file_name, tag_name);
-    
+
+    t_create* sol_create = malloc(sizeof(t_create));
+    sol_create->file_name = file_name;
+    sol_create->tag_name = tag_name;
+
+    t_buffer* buffer = serializar_create(sol_create);
+    t_paquete* paquete = empaquetar_buffer(OP_CREATE, buffer);
+
+    if (enviar_paquete(conexion_storage, paquete) == -1) {
+        log_error(logger_worker, "Error al enviar solicitud CREATE al Storage");
+        free(sol_create);
+        free(paquete);
+        return false;
+    }
+
+    int respuesta_storage;
+    if (recibir_entero(conexion_storage, &respuesta_storage) == -1) {
+        log_error(logger_worker, "Error al recibir respuesta CREATE del Storage");
+        free(sol_create);
+        free(paquete);
+        return false;
+    }
+
+    if (respuesta_storage != 0) { // 0 -> EXITO / 1 -> ERROR
+            log_error(logger_worker, "Error en la respuesta del Storage para CREATE");
+            free(sol_create);
+            free(paquete);
+            return false;
+    }
+
+    free(sol_create);
+    free(paquete);
     return true;
 }
 

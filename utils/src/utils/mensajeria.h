@@ -161,6 +161,14 @@ char *buffer_read_string(t_buffer *buffer);
 void* armar_stream(t_paquete *paquete);
 
 /**
+ * @brief Empaqueta un buffer en un paquete con el codigo de operacion especificado
+ * @param codigo_operacion el codigo de operacion del paquete
+ * @param buffer el buffer a empaquetar
+ * @return el paquete resultante
+ */
+t_paquete* empaquetar_buffer(e_codigo_operacion codigo_operacion, t_buffer* buffer);
+
+/**
 * @brief Envia un paquete a traves de socket. Lo libera despues de enviarlo.
 * @param socket el socket a traves del cual se envia el paquete
 * @param paquete el *t_paquete a enviar

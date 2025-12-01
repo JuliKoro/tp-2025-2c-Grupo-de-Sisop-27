@@ -266,6 +266,13 @@ void* armar_stream(t_paquete *paquete){
 
 }
 
+t_paquete* empaquetar_buffer(e_codigo_operacion codigo_operacion, t_buffer* buffer) {
+    t_paquete* paquete = malloc(sizeof(t_paquete));
+    paquete->codigo_operacion = codigo_operacion;
+    paquete->datos = buffer;
+    return paquete;
+}
+
 int enviar_paquete(int socket, t_paquete *paquete){
     // Armo el stream de bytes a partir del paquete que se recibio
     void* stream = armar_stream(paquete);
@@ -448,6 +455,13 @@ t_buffer* serializar_create(t_create* create) {
     buffer_add_string(buffer, strlen(create->file_name) + 1, create->file_name);
     buffer_add_string(buffer, strlen(create->tag_name) + 1, create->tag_name);
     return buffer;
+}
+
+t_create* deserializar_create(t_buffer* buffer) {
+    t_create* create = malloc(sizeof(t_create));
+    create->file_name = buffer_read_string(buffer);
+    create->tag_name = buffer_read_string(buffer);
+    return create;
 }
 
 t_buffer* serializar_truncate(t_truncate* truncate) {
