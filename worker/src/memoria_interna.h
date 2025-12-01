@@ -16,7 +16,7 @@ extern memoria_interna* memoria_worker;
 /**
  * @brief Inicializa las estructuras administrativas de la memoria y reserva el espacio contiguo.
  */
-memoria_interna* inicializar_memoria(int tam_memoria_config, int tam_pagina_hardcodeado);
+memoria_interna* inicializar_memoria();
 
 /**
  * @brief Libera toda la memoria reservada por el módulo.

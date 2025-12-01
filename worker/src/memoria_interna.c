@@ -6,7 +6,7 @@ memoria_interna* memoria_worker = NULL;
 // Referencias a variables externas definidas en worker.c
 extern t_log* logger_worker;
 
-memoria_interna* inicializar_memoria(int tam_memoria_config, int tam_pagina_hardcodeado) {
+memoria_interna* inicializar_memoria() {
     memoria_interna* mem = malloc(sizeof(memoria_interna));
     if (!mem) {
         fprintf(stderr, "Error: No se pudo asignar memoria para memoria_interna\n");
@@ -14,13 +14,20 @@ memoria_interna* inicializar_memoria(int tam_memoria_config, int tam_pagina_hard
     }
     
     // Hardcodeo el tamaño de página por ahora
-    mem->tam_pagina = tam_pagina_hardcodeado; // Ej: 128 bytes
-    mem->tam_memoria = tam_memoria_config;
-    mem->cantidad_marcos = tam_memoria_config / tam_pagina_hardcodeado;
+    mem->tam_memoria = worker_configs->tam_memoria;
+    mem->tam_pagina = worker_configs->tam_pagina; // tamaño de página del handshake
+    
+    // Validación división por cero
+    if (mem->tam_pagina <= 0) {
+        fprintf(stderr, "Error: Tamaño de página inválido (%d) ", mem->tam_pagina);
+        free(mem);
+        return NULL;
+    }
+    mem->cantidad_marcos = worker_configs->tam_memoria / worker_configs->tam_pagina;
     
     
     // Reservar la memoria principal
-    mem->memoria = malloc(tam_memoria_config);
+    mem->memoria = malloc(mem->tam_memoria);
     if (!mem->memoria) {
         fprintf(stderr, "Error: No se pudo asignar memoria principal\n");
         free(mem);

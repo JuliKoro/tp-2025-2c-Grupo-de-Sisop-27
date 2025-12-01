@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
     // INICIO MEMORIA INTERNA
     // -- CREACIÓN DE TABLAS DE PÁGINAS --
     // Inicializar memoria con tabla de páginas
-    memoria_worker = inicializar_memoria(4096, 128); // Valores hardcodeados por ahora
+    memoria_worker = inicializar_memoria(); // Valores hardcodeados por ahora
     
     // Seteamos el algoritmo en la tabla (ahora que tenemos la memoria inicializada y el config cargado)
     // NOTA: Esto podría moverse a inicializar_memoria, ya que worker_configs es global y extern
