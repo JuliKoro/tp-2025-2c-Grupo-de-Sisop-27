@@ -448,7 +448,7 @@ t_tam_pagina* deserializar_tam_pagina(t_buffer* buffer) {
 // SERIALIZACION DE INSTRUCCIONES
 // ============================================================================
 
-// Serialización para t_solicitud_instruccion según tipo de instrucción
+// Serialización para cada tipo de isntruccion
 
 t_buffer* serializar_create(t_create* create) {
     t_buffer* buffer = crear_buffer(0); // Creo buffer con tam 0, para que sea dinamico y se adopte (REVISAR)
@@ -472,6 +472,14 @@ t_buffer* serializar_truncate(t_truncate* truncate) {
     return buffer;
 }
 
+t_truncate* deserializar_truncate(t_buffer* buffer) {
+    t_truncate* truncate = malloc(sizeof(t_truncate));
+    truncate->file_name = buffer_read_string(buffer);
+    truncate->tag_name = buffer_read_string(buffer);
+    truncate->size = buffer_read_uint32(buffer);
+    return truncate;
+}
+
 t_buffer* serializar_write(t_write* write) {
     t_buffer* buffer = crear_buffer(0);
     buffer_add_string(buffer, strlen(write->file_name) + 1, write->file_name);
@@ -480,6 +488,17 @@ t_buffer* serializar_write(t_write* write) {
     buffer_add_uint32(buffer, write->size);
     buffer_add(buffer, write->content, write->size);
     return buffer;
+}
+
+t_write* deserializar_write(t_buffer* buffer) {
+    t_write* write = malloc(sizeof(t_write));
+    write->file_name = buffer_read_string(buffer);
+    write->tag_name = buffer_read_string(buffer);
+    write->offset = buffer_read_uint32(buffer);
+    write->size = buffer_read_uint32(buffer);
+    write->content = malloc(write->size);
+    buffer_read(buffer, write->content, write->size);
+    return write;
 }
 
 t_buffer* serializar_read(t_read* read) {
@@ -491,6 +510,15 @@ t_buffer* serializar_read(t_read* read) {
     return buffer;
 }
 
+t_read* deserializar_read(t_buffer* buffer) {
+    t_read* read = malloc(sizeof(t_read));
+    read->file_name = buffer_read_string(buffer);
+    read->tag_name = buffer_read_string(buffer);
+    read->offset = buffer_read_uint32(buffer);
+    read->size = buffer_read_uint32(buffer);
+    return read;
+}
+
 t_buffer* serializar_tag(t_tag* tag) {
     t_buffer* buffer = crear_buffer(0);
     buffer_add_string(buffer, strlen(tag->file_name_origen) + 1, tag->file_name_origen);
@@ -500,11 +528,27 @@ t_buffer* serializar_tag(t_tag* tag) {
     return buffer;
 }
 
+t_tag* deserializar_tag(t_buffer* buffer) {
+    t_tag* tag = malloc(sizeof(t_tag));
+    tag->file_name_origen = buffer_read_string(buffer);
+    tag->tag_name_origen = buffer_read_string(buffer);
+    tag->file_name_destino = buffer_read_string(buffer);
+    tag->tag_name_destino = buffer_read_string(buffer);
+    return tag;
+}
+
 t_buffer* serializar_commit(t_commit* commit) {
     t_buffer* buffer = crear_buffer(0);
     buffer_add_string(buffer, strlen(commit->file_name) + 1, commit->file_name);
     buffer_add_string(buffer, strlen(commit->tag_name) + 1, commit->tag_name);
     return buffer;
+}
+
+t_commit* deserializar_commit(t_buffer* buffer) {
+    t_commit* commit = malloc(sizeof(t_commit));
+    commit->file_name = buffer_read_string(buffer);
+    commit->tag_name = buffer_read_string(buffer);
+    return commit;
 }
 
 t_buffer* serializar_flush(t_flush* flush) {
@@ -514,6 +558,13 @@ t_buffer* serializar_flush(t_flush* flush) {
     return buffer;
 }
 
+t_flush* deserializar_flush(t_buffer* buffer) {
+    t_flush* flush = malloc(sizeof(t_flush));
+    flush->file_name = buffer_read_string(buffer);
+    flush->tag_name = buffer_read_string(buffer);
+    return flush;
+}
+
 t_buffer* serializar_delete(t_delete* delete) {
     t_buffer* buffer = crear_buffer(0);
     buffer_add_string(buffer, strlen(delete->file_name) + 1, delete->file_name);
@@ -521,125 +572,9 @@ t_buffer* serializar_delete(t_delete* delete) {
     return buffer;
 }
 
-t_buffer* serializar_solicitud_instruccion(t_solicitud_instruccion* solicitud) {
-    t_buffer* buffer = crear_buffer(0);
-    buffer_add_uint32(buffer, (uint32_t)solicitud->tipo);
-
-    t_buffer* datos_serializados = NULL;
-    switch (solicitud->tipo) {
-        case INST_CREATE:
-            datos_serializados = serializar_create((t_create*)solicitud->datos);
-            break;
-        case INST_TRUNCATE:
-            datos_serializados = serializar_truncate((t_truncate*)solicitud->datos);
-            break;
-        case INST_WRITE:
-            datos_serializados = serializar_write((t_write*)solicitud->datos);
-            break;
-        case INST_READ:
-            datos_serializados = serializar_read((t_read*)solicitud->datos);
-            break;
-        case INST_TAG:
-            datos_serializados = serializar_tag((t_tag*)solicitud->datos);
-            break;
-        case INST_COMMIT:
-            datos_serializados = serializar_commit((t_commit*)solicitud->datos);
-            break;
-        case INST_FLUSH:
-            datos_serializados = serializar_flush((t_flush*)solicitud->datos);
-            break;
-        case INST_DELETE:
-            datos_serializados = serializar_delete((t_delete*)solicitud->datos);
-            break;
-        default:
-            destruir_buffer(buffer);
-            return NULL;
-    }
-
-    buffer_add(buffer, datos_serializados->stream, datos_serializados->size);
-    destruir_buffer(datos_serializados);
-
-    return buffer;
-}
-
-t_solicitud_instruccion* deserializar_solicitud_instruccion(t_buffer* buffer) {
-    if (buffer == NULL || buffer->size == 0) return NULL;
-
-    t_solicitud_instruccion* solicitud = malloc(sizeof(t_solicitud_instruccion));
-    if (!solicitud) return NULL;
-
-    solicitud->tipo = (t_tipo_instruccion) buffer_read_uint32(buffer);
-
-    switch (solicitud->tipo) {
-        case INST_CREATE: {
-            t_create* create = malloc(sizeof(t_create));
-            create->file_name = buffer_read_string(buffer);
-            create->tag_name = buffer_read_string(buffer);
-            solicitud->datos = create;
-            break;
-        }
-        case INST_TRUNCATE: {
-            t_truncate* truncate = malloc(sizeof(t_truncate));
-            truncate->file_name = buffer_read_string(buffer);
-            truncate->tag_name = buffer_read_string(buffer);
-            truncate->size = buffer_read_uint32(buffer);
-            solicitud->datos = truncate;
-            break;
-        }
-        case INST_WRITE: {
-            t_write* write = malloc(sizeof(t_write));
-            write->file_name = buffer_read_string(buffer);
-            write->tag_name = buffer_read_string(buffer);
-            write->offset = buffer_read_uint32(buffer);
-            write->size = buffer_read_uint32(buffer);
-            write->content = malloc(write->size);
-            buffer_read(buffer, write->content, write->size);
-            solicitud->datos = write;
-            break;
-        }
-        case INST_READ: {
-            t_read* read = malloc(sizeof(t_read));
-            read->file_name = buffer_read_string(buffer);
-            read->tag_name = buffer_read_string(buffer);
-            read->offset = buffer_read_uint32(buffer);
-            read->size = buffer_read_uint32(buffer);
-            solicitud->datos = read;
-            break;
-        }
-        case INST_TAG: {
-            t_tag* tag = malloc(sizeof(t_tag));
-            tag->file_name_origen = buffer_read_string(buffer);
-            tag->tag_name_origen = buffer_read_string(buffer);
-            tag->file_name_destino = buffer_read_string(buffer);
-            tag->tag_name_destino = buffer_read_string(buffer);
-            solicitud->datos = tag;
-            break;
-        }
-        case INST_COMMIT: {
-            t_commit* commit = malloc(sizeof(t_commit));
-            commit->file_name = buffer_read_string(buffer);
-            commit->tag_name = buffer_read_string(buffer);
-            solicitud->datos = commit;
-            break;
-        }
-        case INST_FLUSH: {
-            t_flush* flush = malloc(sizeof(t_flush));
-            flush->file_name = buffer_read_string(buffer);
-            flush->tag_name = buffer_read_string(buffer);
-            solicitud->datos = flush;
-            break;
-        }
-        case INST_DELETE: {
-            t_delete* delete = malloc(sizeof(t_delete));
-            delete->file_name = buffer_read_string(buffer);
-            delete->tag_name = buffer_read_string(buffer);
-            solicitud->datos = delete;
-            break;
-        }
-        default:
-            free(solicitud);
-            return NULL;
-    }
-
-    return solicitud;
+t_delete* deserializar_delete(t_buffer* buffer) {
+    t_delete* delete = malloc(sizeof(t_delete));
+    delete->file_name = buffer_read_string(buffer);
+    delete->tag_name = buffer_read_string(buffer);
+    return delete;
 }

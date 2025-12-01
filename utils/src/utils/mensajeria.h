@@ -268,20 +268,6 @@ t_buffer* serializar_tam_pagina(t_tam_pagina* tam_pagina_struct);
  */
 t_tam_pagina* deserializar_tam_pagina(t_buffer* buffer);
 
-/**
- * @brief Serializa una solicitud de instrucción para Worker->Storage
- * @param solicitud Puntero a t_solicitud_instruccion a serializar
- * @return t_buffer* Buffer con la serialización
- */
-t_buffer* serializar_solicitud_instruccion(t_solicitud_instruccion* solicitud);
-
-/**
- * @brief Deserializa un buffer recibido a una estructura t_solicitud_instruccion
- * @param buffer Puntero a t_buffer con datos serializados
- * @return t_solicitud_instruccion* Puntero a la estructura deserializada (liberar luego)
- */
-t_solicitud_instruccion* deserializar_solicitud_instruccion(t_buffer* buffer);
-
 // ============================================================================
 // SERIALIZACION DE INSTRUCCIONES
 // ============================================================================
@@ -293,11 +279,25 @@ t_solicitud_instruccion* deserializar_solicitud_instruccion(t_buffer* buffer);
 t_buffer* serializar_create(t_create* create);
 
 /**
+ * @brief Deserializa una instrucción CREATE
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_create* Estructura t_create deserializada
+ */
+t_create* deserializar_create(t_buffer* buffer);
+
+/**
  * @brief Serializa una instrucción TRUNCATE
  * @param truncate Puntero a t_truncate a serializar
  * @return t_buffer* Buffer con la serialización
  */
 t_buffer* serializar_truncate(t_truncate* truncate);
+
+/**
+ * @brief Deserializa una instrucción TRUNCATE
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_truncate* Estructura t_truncate deserializada
+ */
+t_truncate* deserializar_truncate(t_buffer* buffer);
 
 /**
  * @brief Serializa una instrucción WRITE
@@ -307,11 +307,25 @@ t_buffer* serializar_truncate(t_truncate* truncate);
 t_buffer* serializar_write(t_write* write);
 
 /**
+ * @brief Deserializa una instrucción WRITE
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_write* Estructura t_write deserializada
+ */
+t_write* deserializar_write(t_buffer* buffer);
+
+/**
  * @brief Serializa una instrucción READ
  * @param read Puntero a t_read a serializar
  * @return t_buffer* Buffer con la serialización
  */
 t_buffer* serializar_read(t_read* read);
+
+/**
+ * @brief Deserializa una instrucción READ
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_read* Estructura t_read deserializada
+ */
+t_read* deserializar_read(t_buffer* buffer);
 
 /**
  * @brief Serializa una instrucción TAG
@@ -321,11 +335,25 @@ t_buffer* serializar_read(t_read* read);
 t_buffer* serializar_tag(t_tag* tag);
 
 /**
+ * @brief Deserializa una instrucción TAG
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_tag* Estructura t_tag deserializada
+ */
+t_tag* deserializar_tag(t_buffer* buffer);
+
+/**
  * @brief Serializa una instrucción COMMIT
  * @param commit Puntero a t_commit a serializar
  * @return t_buffer* Buffer con la serialización
  */
 t_buffer* serializar_commit(t_commit* commit);
+
+/**
+ * @brief Deserializa una instrucción COMMIT
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_commit* Estructura t_commit deserializada
+ */
+t_commit* deserializar_commit(t_buffer* buffer);
 
 /**
  * @brief Serializa una instrucción FLUSH
@@ -335,12 +363,25 @@ t_buffer* serializar_commit(t_commit* commit);
 t_buffer* serializar_flush(t_flush* flush);
 
 /**
+ * @brief Deserializa una instrucción FLUSH
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_flush* Estructura t_flush deserializada
+ */
+t_flush* deserializar_flush(t_buffer* buffer);
+
+/**
  * @brief Serializa una instrucción DELETE
  * @param delete Puntero a t_delete a serializar
  * @return t_buffer* Buffer con la serialización
  */
 t_buffer* serializar_delete(t_delete* delete);
 
+/**
+ * @brief Deserializa una instrucción DELETE
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_delete* Estructura t_delete deserializada
+ */
+t_delete* deserializar_delete(t_buffer* buffer);
 #endif
  
 
