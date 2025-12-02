@@ -123,6 +123,22 @@ typedef struct {
 /***                                   ESTRUCTURAS PARA INSTRUCCIONES WORKER->STORAGE                                    ***/
 /***********************************************************************************************************************/
 
+/**
+ * @brief Resultado de la ejecución de una instrucción
+ */
+typedef enum {
+    EXEC_DESALOJO = 2,        // Se solicitó desalojo
+    EXEC_FIN_QUERY = 1,        // Instrucción END ejecutada
+    EXEC_OK = 0,              // Ejecución exitosa
+    EXEC_ERROR = -1,           // Error en la ejecución
+    ERROR_FILE_NO_EXISTE = -2,
+    ERROR_YA_EXISTE = -3,
+    ERROR_ESPACIO_INSUFICIENTE = -4,
+    ERROR_ESCRITURA_NO_PERMITIDA = -5, // Archivo en estado COMMITED
+    ERROR_FUERA_DE_LIMITE = -6,
+    ERROR_CONEXION = -7
+} t_resultado_ejecucion;
+
 // ============================================================================
 // TIPOS DE INSTRUCCIONES
 // ============================================================================

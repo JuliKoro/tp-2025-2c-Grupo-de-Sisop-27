@@ -41,6 +41,7 @@
 #include "registros.h"
 #include "w_conexiones.h"
 #include "worker.h"
+#include "memoria_interna.h"
 
 /**
  * @brief Enumeración de los tipos de instrucciones soportadas
@@ -72,16 +73,6 @@ typedef struct {
     char* contenido;           // Contenido (para WRITE)
     char* instruccion_raw;     // Instrucción completa sin parsear
 } t_instruccion;
-
-/**
- * @brief Resultado de la ejecución de una instrucción
- */
-typedef enum {
-    EXEC_OK,              // Ejecución exitosa
-    EXEC_ERROR,           // Error en la ejecución
-    EXEC_DESALOJO,        // Se solicitó desalojo
-    EXEC_FIN_QUERY        // Instrucción END ejecutada
-} t_resultado_ejecucion;
 
 // ============================================================================
 // FUNCIÓN PRINCIPAL
@@ -141,18 +132,18 @@ t_resultado_ejecucion execute_instruction(t_instruccion* instruccion);
  * @brief Ejecuta instrucción CREATE
  * @param file_name Nombre del File
  * @param tag_name Nombre del Tag
- * @return true si se ejecutó correctamente
+ * @return Resultado de la ejecución
  */
-bool execute_create(char* file_name, char* tag_name);
+t_resultado_ejecucion execute_create(char* file_name, char* tag_name);
 
 /**
  * @brief Ejecuta instrucción TRUNCATE
  * @param file_name Nombre del File
  * @param tag_name Nombre del Tag
  * @param tamanio Nuevo tamaño del File:Tag
- * @return true si se ejecutó correctamente
+ * @return Resultado de la ejecución
  */
-bool execute_truncate(char* file_name, char* tag_name, uint32_t tamanio);
+t_resultado_ejecucion execute_truncate(char* file_name, char* tag_name, uint32_t tamanio);
 
 /**
  * @brief Ejecuta instrucción WRITE
@@ -160,9 +151,9 @@ bool execute_truncate(char* file_name, char* tag_name, uint32_t tamanio);
  * @param tag_name Nombre del Tag
  * @param direccion_base Dirección base donde escribir
  * @param contenido Contenido a escribir
- * @return true si se ejecutó correctamente
+ * @return Resultado de la ejecución
  */
-bool execute_write(char* file_name, char* tag_name, uint32_t direccion_base, char* contenido);
+t_resultado_ejecucion execute_write(char* file_name, char* tag_name, uint32_t direccion_base, char* contenido);
 
 /**
  * @brief Ejecuta instrucción READ
@@ -170,9 +161,9 @@ bool execute_write(char* file_name, char* tag_name, uint32_t direccion_base, cha
  * @param tag_name Nombre del Tag
  * @param direccion_base Dirección base desde donde leer
  * @param tamanio Cantidad de bytes a leer
- * @return true si se ejecutó correctamente
+ * @return Resultado de la ejecución
  */
-bool execute_read(char* file_name, char* tag_name, uint32_t direccion_base, uint32_t tamanio);
+t_resultado_ejecucion execute_read(char* file_name, char* tag_name, uint32_t direccion_base, uint32_t tamanio);
 
 /**
  * @brief Ejecuta instrucción TAG
@@ -180,39 +171,39 @@ bool execute_read(char* file_name, char* tag_name, uint32_t direccion_base, uint
  * @param tag_origen Nombre del Tag origen
  * @param file_destino Nombre del File destino
  * @param tag_destino Nombre del Tag destino
- * @return true si se ejecutó correctamente
+ * @return Resultado de la ejecución
  */
-bool execute_tag(char* file_origen, char* tag_origen, char* file_destino, char* tag_destino);
+t_resultado_ejecucion execute_tag(char* file_origen, char* tag_origen, char* file_destino, char* tag_destino);
 
 /**
  * @brief Ejecuta instrucción COMMIT
  * @param file_name Nombre del File
  * @param tag_name Nombre del Tag
- * @return true si se ejecutó correctamente
+ * @return Resultado de la ejecución
  */
-bool execute_commit(char* file_name, char* tag_name);
+t_resultado_ejecucion execute_commit(char* file_name, char* tag_name);
 
 /**
  * @brief Ejecuta instrucción FLUSH
  * @param file_name Nombre del File
  * @param tag_name Nombre del Tag
- * @return true si se ejecutó correctamente
+ * @return Resultado de la ejecución
  */
-bool execute_flush(char* file_name, char* tag_name);
+t_resultado_ejecucion execute_flush(char* file_name, char* tag_name);
 
 /**
  * @brief Ejecuta instrucción DELETE
  * @param file_name Nombre del File
  * @param tag_name Nombre del Tag
- * @return true si se ejecutó correctamente
+ * @return Resultado de la ejecución
  */
-bool execute_delete(char* file_name, char* tag_name);
+t_resultado_ejecucion execute_delete(char* file_name, char* tag_name);
 
 /**
  * @brief Ejecuta instrucción END
- * @return true siempre
+ * @return EXEC_FIN_QUERY siempre
  */
-bool execute_end();
+t_resultado_ejecucion execute_end();
 
 // ============================================================================
 // FUNCIONES AUXILIARES
@@ -225,6 +216,12 @@ bool execute_end();
  * @return true si se envió correctamente
  */
 bool enviar_instruccion(e_codigo_operacion cod_op, void* estructura_inst);
+
+/**
+ * @brief Recibe la respuesta del Storage tras ejecutar una instrucción
+ * @return Resultado de la ejecución recibido del Storage
+ */
+t_resultado_ejecucion recibir_respuesta_storage();
 
 /**
  * @brief Separa un string "FILE:TAG" en sus componentes

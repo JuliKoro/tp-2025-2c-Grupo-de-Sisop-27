@@ -25,13 +25,15 @@ t_resultado_ejecucion query_interpreter() {
         return EXEC_ERROR;
     }
     
-    t_resultado_ejecucion resultado = EXEC_OK;
+    t_resultado_ejecucion resultado = EXEC_OK; // Resultado de la ejecución de la Query
     
     // Ciclo de instruccion
     while (true) {
         // Verificar si se debe desalojar
         if (desalojar_query) {
+            // TODO: Hacer FLUSH de todas las páginas modificadas
             log_info(logger_worker, "## Query %d: Desalojada por pedido del Master", id_query);
+            fclose(archivo);
             return EXEC_DESALOJO;
         }
         
@@ -57,31 +59,30 @@ t_resultado_ejecucion query_interpreter() {
         }
         
         // EXECUTE: Ejecutar la instrucción
-        t_resultado_ejecucion resultado_exec = execute_instruction(instruccion);
+        t_resultado_ejecucion resultado = execute_instruction(instruccion); // Resulado de la ejecución de la instrucción
         
         // Log obligatorio: Instrucción realizada
-        if (resultado_exec == EXEC_OK || resultado_exec == EXEC_FIN_QUERY) {
+        if (resultado == EXEC_OK || resultado == EXEC_FIN_QUERY) {
             log_info(logger_worker, "## Query %d: - Instrucción realizada: %s", 
                      id_query, tipo_instruccion_to_string(instruccion->tipo));
         }
         
         destruir_instruccion(instruccion);
         
-        // Verificar resultado de la ejecución
-        if (resultado_exec == EXEC_ERROR) {
+        // Verificar resultado de la ejecución de la instrucción
+        if (resultado < 0) {
             log_error(logger_worker, "Error al ejecutar la instrucción en PC: %d", pc_actual);
-            resultado = EXEC_ERROR;
             break;
         }
         
-        if (resultado_exec == EXEC_FIN_QUERY) {
-            log_info(logger_worker, "Query %d finalizada correctamente", id_query);
-            resultado = EXEC_OK;
+        if (resultado == EXEC_FIN_QUERY) {
+            log_debug(logger_worker, "Query %d finalizada correctamente", id_query);
+            pc_actual++;
             break;
         }
         
-        if (resultado_exec == EXEC_DESALOJO) {
-            resultado = EXEC_DESALOJO;
+        if (resultado == EXEC_DESALOJO) {
+            pc_actual++;
             break;
         }
         
@@ -223,7 +224,7 @@ t_resultado_ejecucion execute_instruction(t_instruccion* instruccion) {
         return EXEC_ERROR;
     }
     
-    bool resultado = false;
+    t_resultado_ejecucion resultado = EXEC_ERROR;
     
     switch (instruccion->tipo) {
         case INST_CREATE:
@@ -269,17 +270,17 @@ t_resultado_ejecucion execute_instruction(t_instruccion* instruccion) {
             return EXEC_ERROR;
     }
     
-    return resultado ? EXEC_OK : EXEC_ERROR;
+    return resultado;
 }
 
 // ============================================================================
 // EJECUCIÓN DE INSTRUCCIONES ESPECÍFICAS
 // ============================================================================
 
-bool execute_create(char* file_name, char* tag_name) {
+t_resultado_ejecucion execute_create(char* file_name, char* tag_name) {
     if (file_name == NULL || tag_name == NULL) {
         log_error(logger_worker, "CREATE: Parámetros inválidos");
-        return false;
+        return EXEC_ERROR;
     }
 
     log_debug(logger_worker, "Ejecutando CREATE %s:%s", file_name, tag_name);
@@ -290,27 +291,18 @@ bool execute_create(char* file_name, char* tag_name) {
 
     if (!enviar_instruccion(OP_CREATE, sol_create)) {
         log_error(logger_worker, "Error al enviar solicitud CREATE al Storage");
-        return false;
+        return ERROR_CONEXION;
     }
 
-    int respuesta_storage;
-    if (recibir_entero(conexion_storage, &respuesta_storage) == -1) {
-        log_error(logger_worker, "Error al recibir respuesta CREATE del Storage");
-        return false;
-    }
+    t_resultado_ejecucion respuesta_storage = recibir_respuesta_storage();
 
-    if (respuesta_storage != 1) { // 1 -> EXITO / 0 -> ERROR
-            log_error(logger_worker, "Error en la respuesta del Storage para CREATE");
-            return false;
-    }
-
-    return true;
+    return respuesta_storage;
 }
 
-bool execute_truncate(char* file_name, char* tag_name, uint32_t tamanio) {
+t_resultado_ejecucion execute_truncate(char* file_name, char* tag_name, uint32_t tamanio) {
     if (file_name == NULL || tag_name == NULL) {
         log_error(logger_worker, "TRUNCATE: Parámetros inválidos");
-        return false;
+        return EXEC_ERROR;
     }
     
     log_debug(logger_worker, "Ejecutando TRUNCATE %s:%s %d", file_name, tag_name, tamanio);
@@ -322,27 +314,18 @@ bool execute_truncate(char* file_name, char* tag_name, uint32_t tamanio) {
 
     if (!enviar_instruccion(OP_TRUNCATE, sol_truncate)) {
         log_error(logger_worker, "Error al enviar solicitud TRUNCATE al Storage");
-        return false;
+        return ERROR_CONEXION;
     }
 
-    int respuesta_storage;
-    if (recibir_entero(conexion_storage, &respuesta_storage) == -1) {
-        log_error(logger_worker, "Error al recibir respuesta TRUNCATE del Storage");
-        return false;
-    }
+    t_resultado_ejecucion respuesta_storage = recibir_respuesta_storage();
 
-    if (respuesta_storage != 1) { // 1 -> EXITO / 0 -> ERROR
-            log_error(logger_worker, "Error en la respuesta del Storage para TRUNCATE");
-            return false;
-    }
-
-    return true;
+    return respuesta_storage;
 }
 
-bool execute_write(char* file_name, char* tag_name, uint32_t direccion_base, char* contenido) {
+t_resultado_ejecucion execute_write(char* file_name, char* tag_name, uint32_t direccion_base, char* contenido) {
     if (file_name == NULL || tag_name == NULL || contenido == NULL) {
         log_error(logger_worker, "WRITE: Parámetros inválidos");
-        return false;
+        return EXEC_ERROR;
     }
     
     // TODO: Escribir en memoria interna
@@ -362,13 +345,13 @@ bool execute_write(char* file_name, char* tag_name, uint32_t direccion_base, cha
         usleep(worker_configs->retardo_memoria * 1000);
     }
     
-    return true;
+    return EXEC_OK;
 }
 
-bool execute_read(char* file_name, char* tag_name, uint32_t direccion_base, uint32_t tamanio) {
+t_resultado_ejecucion execute_read(char* file_name, char* tag_name, uint32_t direccion_base, uint32_t tamanio) {
     if (file_name == NULL || tag_name == NULL) {
         log_error(logger_worker, "READ: Parámetros inválidos");
-        return false;
+        return EXEC_ERROR;
     }
     
     // TODO: Leer de memoria interna
@@ -393,14 +376,14 @@ bool execute_read(char* file_name, char* tag_name, uint32_t direccion_base, uint
         usleep(worker_configs->retardo_memoria * 1000);
     }
     
-    return true;
+    return EXEC_OK;
 }
 
-bool execute_tag(char* file_origen, char* tag_origen, char* file_destino, char* tag_destino) {
+t_resultado_ejecucion execute_tag(char* file_origen, char* tag_origen, char* file_destino, char* tag_destino) {
     if (file_origen == NULL || tag_origen == NULL || 
         file_destino == NULL || tag_destino == NULL) {
         log_error(logger_worker, "TAG: Parámetros inválidos");
-        return false;
+        return EXEC_ERROR;
     }
     
     log_debug(logger_worker, "Ejecutando TAG %s:%s %s:%s", 
@@ -414,27 +397,18 @@ bool execute_tag(char* file_origen, char* tag_origen, char* file_destino, char* 
 
     if (!enviar_instruccion(OP_TAG, sol_tag)) {
         log_error(logger_worker, "Error al enviar solicitud TAG al Storage");
-        return false;
+        return ERROR_CONEXION;
     }
 
-    int respuesta_storage;
-    if (recibir_entero(conexion_storage, &respuesta_storage) == -1) {
-        log_error(logger_worker, "Error al recibir respuesta TAG del Storage");
-        return false;
-    }
+    t_resultado_ejecucion respuesta_storage = recibir_respuesta_storage();
 
-    if (respuesta_storage != 1) { // 1 -> EXITO / 0 -> ERROR
-            log_error(logger_worker, "Error en la respuesta del Storage para TAG");
-            return false;
-    }
-
-    return true;
+    return respuesta_storage;
 }
 
-bool execute_commit(char* file_name, char* tag_name) {
+t_resultado_ejecucion execute_commit(char* file_name, char* tag_name) {
     if (file_name == NULL || tag_name == NULL) {
         log_error(logger_worker, "COMMIT: Parámetros inválidos");
-        return false;
+        return EXEC_ERROR;
     }
     
     log_debug(logger_worker, "Ejecutando COMMIT %s:%s", file_name, tag_name);
@@ -445,27 +419,18 @@ bool execute_commit(char* file_name, char* tag_name) {
 
     if (!enviar_instruccion(OP_COMMIT, sol_commit)) {
         log_error(logger_worker, "Error al enviar solicitud COMMIT al Storage");
-        return false;
+        return ERROR_CONEXION;
     }
 
-    int respuesta_storage;
-    if (recibir_entero(conexion_storage, &respuesta_storage) == -1) {
-        log_error(logger_worker, "Error al recibir respuesta COMMIT del Storage");
-        return false;
-    }
-
-    if (respuesta_storage != 1) { // 1 -> EXITO / 0 -> ERROR
-            log_error(logger_worker, "Error en la respuesta del Storage para COMMIT");
-            return false;
-    }
+    t_resultado_ejecucion respuesta_storage = recibir_respuesta_storage();
     
-    return true;
+    return respuesta_storage;
 }
 
-bool execute_flush(char* file_name, char* tag_name) {
+t_resultado_ejecucion execute_flush(char* file_name, char* tag_name) {
     if (file_name == NULL || tag_name == NULL) {
         log_error(logger_worker, "FLUSH: Parámetros inválidos");
-        return false;
+        return EXEC_ERROR;
     }
     
     // TODO: Persistir todas las páginas modificadas del File:Tag en Storage
@@ -479,13 +444,13 @@ bool execute_flush(char* file_name, char* tag_name) {
         usleep(worker_configs->retardo_memoria * 1000);
     }
     
-    return true;
+    return EXEC_OK;
 }
 
-bool execute_delete(char* file_name, char* tag_name) {
+t_resultado_ejecucion execute_delete(char* file_name, char* tag_name) {
     if (file_name == NULL || tag_name == NULL) {
         log_error(logger_worker, "DELETE: Parámetros inválidos");
-        return false;
+        return EXEC_ERROR;
     }
     
     log_debug(logger_worker, "Ejecutando DELETE %s:%s", file_name, tag_name);
@@ -496,26 +461,17 @@ bool execute_delete(char* file_name, char* tag_name) {
 
     if (!enviar_instruccion(OP_DELETE, sol_delete)) {
         log_error(logger_worker, "Error al enviar solicitud DELETE al Storage");
-        return false;
+        return ERROR_CONEXION;
     }
 
-    int respuesta_storage;
-    if (recibir_entero(conexion_storage, &respuesta_storage) == -1) {
-        log_error(logger_worker, "Error al recibir respuesta DELETE del Storage");
-        return false;
-    }
+    t_resultado_ejecucion respuesta_storage = recibir_respuesta_storage();
 
-    if (respuesta_storage != 1) { // 1 -> EXITO / 0 -> ERROR
-            log_error(logger_worker, "Error en la respuesta del Storage para DELETE");
-            return false;
-    }
-
-    return true;
+    return respuesta_storage;
 }
 
-bool execute_end() {
-    log_info(logger_worker, "Ejecutando END - Finalizando query");
-    return true;
+t_resultado_ejecucion execute_end() {
+    log_debug(logger_worker, "Ejecutando END - Finalizando query");
+    return EXEC_FIN_QUERY;
 }
 
 bool enviar_instruccion(e_codigo_operacion cod_op, void* estructura_inst) {
@@ -546,6 +502,38 @@ bool enviar_instruccion(e_codigo_operacion cod_op, void* estructura_inst) {
     return true;
 }
 
+t_resultado_ejecucion recibir_respuesta_storage() {
+    int respuesta;
+    if (recibir_entero(conexion_storage, &respuesta) == -1) {
+        log_error(logger_worker, "Error al recibir respuesta del Storage");
+        return ERROR_CONEXION;
+    }
+
+    switch (respuesta) {
+        case 0:
+            log_debug(logger_worker, "Operación realizada con éxito en Storage");
+            return EXEC_OK;
+        case -2:
+            log_error(logger_worker, "Error: El archivo no existe en Storage");
+            return ERROR_FILE_NO_EXISTE;
+        case -3:
+            log_error(logger_worker, "Error: El archivo ya existe en Storage");
+            return ERROR_YA_EXISTE;
+        case -4:
+            log_error(logger_worker, "Error: Espacio insuficiente en Storage");
+            return ERROR_ESPACIO_INSUFICIENTE;
+        case -5:
+            log_error(logger_worker, "Error: Escritura no permitida en Storage");
+            return ERROR_ESCRITURA_NO_PERMITIDA;
+        case -6:
+            log_error(logger_worker, "Error: Dirección fuera de límite en Storage");
+            return ERROR_FUERA_DE_LIMITE;
+        default:
+            log_error(logger_worker, "Error desconocido recibido del Storage");
+            return EXEC_ERROR;
+    }
+
+}
 
 // ============================================================================
 // FUNCIONES AUXILIARES

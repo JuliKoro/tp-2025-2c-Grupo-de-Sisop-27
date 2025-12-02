@@ -205,7 +205,7 @@ void* hilo_query_interpreter(void* arg){
             case EXEC_DESALOJO:
                 log_info(logger_worker, "Query %d desalojada. PC actual: %d", id_query, pc_actual);
                 // TODO: Enviar contexto (PC) al Master para reanudación posterior
-                // TODO: Hacer FLUSH de todas las páginas modificadas
+                
                 break;
                 
             case EXEC_ERROR:
@@ -251,7 +251,7 @@ void inicializacion_worker(char* nombre_config, char* id_worker_str){
     log_debug(logger_worker, "Iniciado Worker ID: %d", id_worker);
 }
 
-int conexiones_worker(){
+int conexiones_worker(){ // Migrar a w_conexiones.c luego
     //SOCKETS
     char puerto_storage[10];
     char puerto_master[10];
