@@ -141,6 +141,10 @@ typedef struct {
 
 /**
  * @brief Estructura para notificar el resultado de ejecución de una Query
+ * @param id_query el ID de la query ejecutada - uint32_t
+ * @param estado el estado final de la query - t_resultado_ejecucion
+ * @param pc_final el valor del program counter donde terminó la ejecución - uint32_t
+ * @param mensaje_error mensaje descriptivo del error (NULL si no hubo error) - char
  * @note Enviada desde Worker → Master → Query Control
  */
 typedef struct {

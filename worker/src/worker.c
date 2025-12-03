@@ -190,37 +190,25 @@ void* hilo_query_interpreter(void* arg){
         
         log_debug(logger_worker, "Query Interpreter: Iniciando ejecución de query");
         
-        
         // Ejecutar el query interpreter (ciclo de instrucciones)
         t_resultado_ejecucion resultado = query_interpreter();
         
         // Procesar el resultado de la ejecución
+        if (resultado == EXEC_FIN_QUERY) {
+            log_debug(logger_worker, "Query %d finalizó correctamente.", id_query);
+        } else if (resultado == EXEC_DESALOJO) {
+            log_warning(logger_worker, "Query %d fue desalojada en PC: %d.", id_query, pc_actual);
+        } 
         
-        switch (resultado) {
-            case EXEC_OK:
-                log_info(logger_worker, "Query %d finalizada exitosamente", id_query);
-                // TODO: Notificar al Master que la query terminó correctamente
-                break;
-                
-            case EXEC_DESALOJO:
-                log_info(logger_worker, "Query %d desalojada. PC actual: %d", id_query, pc_actual);
-                // TODO: Enviar contexto (PC) al Master para reanudación posterior
-                
-                break;
-                
-            case EXEC_ERROR:
-                log_error(logger_worker, "Query %d terminó con error", id_query);
-                // TODO: Notificar al Master del error
-                break;
-                
-            case EXEC_FIN_QUERY:
-                log_info(logger_worker, "Query %d ejecutó instrucción END", id_query);
-                // TODO: Notificar al Master que la query terminó
-                break;
+        if (!notificar_resultado_a_master(resultado)) {
+            log_error(logger_worker, "Error al notificar resultado de la Query %d al Master", id_query);
         }
-        
+
         pthread_mutex_lock(&mutex_registros);
         // Limpiar estado
+        resultado = EXEC_OK;
+        pc_actual = 0;
+        id_query = 0;
         query_en_ejecucion = false;
         desalojar_query = false;
         if (path_query != NULL) {
@@ -294,3 +282,4 @@ int conexiones_worker(){ // Migrar a w_conexiones.c luego
 
     return 0;
 }
+

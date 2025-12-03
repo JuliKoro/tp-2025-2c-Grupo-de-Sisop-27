@@ -32,6 +32,7 @@ t_resultado_ejecucion query_interpreter() {
         // Verificar si se debe desalojar
         if (desalojar_query) {
             // TODO: Hacer FLUSH de todas las páginas modificadas
+            resultado = flush_all(); // Falta hacer
             log_info(logger_worker, "## Query %d: Desalojada por pedido del Master", id_query);
             fclose(archivo);
             return EXEC_DESALOJO;
@@ -77,11 +78,6 @@ t_resultado_ejecucion query_interpreter() {
         
         if (resultado == EXEC_FIN_QUERY) {
             log_debug(logger_worker, "Query %d finalizada correctamente", id_query);
-            pc_actual++;
-            break;
-        }
-        
-        if (resultado == EXEC_DESALOJO) {
             pc_actual++;
             break;
         }
@@ -263,7 +259,7 @@ t_resultado_ejecucion execute_instruction(t_instruccion* instruccion) {
             
         case INST_END:
             resultado = execute_end();
-            return EXEC_FIN_QUERY;
+            break;
             
         default:
             log_error(logger_worker, "Tipo de instrucción desconocida");
@@ -533,6 +529,61 @@ t_resultado_ejecucion recibir_respuesta_storage() {
             return EXEC_ERROR;
     }
 
+}
+
+bool notificar_resultado_a_master(t_resultado_ejecucion estado) {
+    t_resultado_query* resultado = malloc(sizeof(t_resultado_query));
+    resultado->id_query = id_query;
+    resultado->estado = estado;
+    resultado->pc_final = pc_actual;
+    
+    e_codigo_operacion codigo_op;
+
+    // Agrega mensaje de error si corresponde
+    if (estado < 0) {
+        resultado->mensaje_error = obtener_mensaje_error(estado);
+        log_warning(logger_worker, "Query %d abortada debido a un error. Cod. Error: %d - %s", id_query, estado, resultado->mensaje_error);
+        codigo_op = OP_ERROR;
+    } else {
+        resultado->mensaje_error = NULL;
+        if (estado == EXEC_FIN_QUERY) codigo_op = OP_FIN_QUERY;
+        else if (estado == EXEC_DESALOJO) codigo_op = OP_DESALOJAR_QUERY;
+    }
+    
+    t_buffer* buffer = serializar_resultado_query(resultado);
+    t_paquete* paquete = empaquetar_buffer(codigo_op, buffer);
+    
+    if (enviar_paquete(conexion_master, paquete) == -1) {
+        log_error(logger_worker, "Error al notificar resultado de la Query %d al Master", id_query);
+        if (resultado->mensaje_error) free(resultado->mensaje_error);
+        free(resultado);
+        return false;
+    }
+    
+    if (resultado->mensaje_error) free(resultado->mensaje_error);
+    free(resultado);
+    return true;
+}
+
+char* obtener_mensaje_error(t_resultado_ejecucion estado) {
+    switch (estado) {
+        case ERROR_FILE_NO_EXISTE:
+            return strdup("Error: El archivo no existe en Storage");
+        case ERROR_YA_EXISTE:
+            return strdup("Error: El archivo ya existe en Storage");
+        case ERROR_ESPACIO_INSUFICIENTE:
+            return strdup("Error: Espacio insuficiente en Storage");
+        case ERROR_ESCRITURA_NO_PERMITIDA:
+            return strdup("Error: Escritura no permitida en Storage");
+        case ERROR_FUERA_DE_LIMITE:
+            return strdup("Error: Dirección fuera de límite en Storage");
+        case ERROR_CONEXION:
+            return strdup("Error de conexión con Storage");
+        case EXEC_ERROR:
+            return strdup("Error ocurrido durante la ejecución de la query en Worker");
+        default:
+            return strdup("Error desconocido");
+    }
 }
 
 // ============================================================================
