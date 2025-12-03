@@ -268,6 +268,21 @@ t_buffer* serializar_tam_pagina(t_tam_pagina* tam_pagina_struct);
  */
 t_tam_pagina* deserializar_tam_pagina(t_buffer* buffer);
 
+/**
+ * @brief Serializa un t_resultado_query
+ * @param resultado el *t_resultado_query a serializar
+ * @return el *t_buffer resultante
+ */
+t_buffer* serializar_resultado_query(t_resultado_query* resultado);
+
+/**
+ * @brief Deserializa un t_resultado_query
+ * @param buffer el *t_buffer a deserializar
+ * @return el *t_resultado_query resultante. 
+ * @note La estructura debe ser liberada por el que la recibe
+ */
+t_resultado_query* deserializar_resultado_query(t_buffer* buffer);
+
 // ============================================================================
 // SERIALIZACION DE INSTRUCCIONES
 // ============================================================================

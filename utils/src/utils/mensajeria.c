@@ -444,6 +444,45 @@ t_tam_pagina* deserializar_tam_pagina(t_buffer* buffer) {
     tam_pagina_struct->tam_pagina = buffer_read_uint32(buffer);
     return tam_pagina_struct;
 }
+
+t_buffer* serializar_resultado_query(t_resultado_query* resultado) {
+    uint32_t tamanio_buffer = sizeof(uint32_t) + sizeof(t_resultado_ejecucion) + sizeof(uint32_t);
+    if (resultado->mensaje_error != NULL) {
+        tamanio_buffer += sizeof(uint32_t) + strlen(resultado->mensaje_error);
+    } else {
+        tamanio_buffer += sizeof(uint32_t); // Longitud 0 para mensaje_error
+    }
+
+    t_buffer* buffer = crear_buffer(tamanio_buffer);
+    buffer_add_uint32(buffer, resultado->id_query);
+    buffer_add_uint32(buffer, (uint32_t)resultado->estado);
+    buffer_add_uint32(buffer, resultado->pc_final);
+
+    if (resultado->mensaje_error != NULL) {
+        buffer_add_string(buffer, strlen(resultado->mensaje_error), resultado->mensaje_error);
+    } else {
+        buffer_add_uint32(buffer, 0); // Longitud 0 para mensaje_error
+    }
+
+    return buffer;
+}
+
+t_resultado_query* deserializar_resultado_query(t_buffer* buffer) {
+    t_resultado_query* resultado = malloc(sizeof(t_resultado_query));
+    resultado->id_query = buffer_read_uint32(buffer);
+    resultado->estado = (t_resultado_ejecucion)buffer_read_uint32(buffer);
+    resultado->pc_final = buffer_read_uint32(buffer);
+
+    uint32_t longitud_mensaje = buffer_read_uint32(buffer);
+    if (longitud_mensaje > 0) {
+        resultado->mensaje_error = buffer_read_string(buffer);
+    } else {
+        resultado->mensaje_error = NULL;
+    }
+
+    return resultado;
+}
+
 // ============================================================================
 // SERIALIZACION DE INSTRUCCIONES
 // ============================================================================

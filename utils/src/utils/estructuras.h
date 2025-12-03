@@ -103,22 +103,6 @@ typedef struct {
     uint32_t tam_pagina;      // Tamaño de cada página en bytes
 } t_tam_pagina;
 
-/**
- * @brief Estructura para la asigancion de una nueva query
- * @param id_query el ID de la query
- * @param path_query el path de la query - char*
- * @param pc el valor inicial del program counter - uint32_t
- * @note Utilizado para caundo el master asigna una nueva query al worker
- */
-typedef struct {
-    uint32_t id_query;   // ID de la query
-    char* path_query;  // PATH (string, serializado con longitud)
-    uint32_t pc;       // PC (binario, 4 bytes)
-} t_asignacion_query;
-
-// ESTRUCTURAS PARA SOLICITUD DE INSTRUCCIONES (WORKER - STORAGE)
-
-
 /***********************************************************************************************************************/
 /***                                   ESTRUCTURAS PARA INSTRUCCIONES WORKER->STORAGE                                    ***/
 /***********************************************************************************************************************/
@@ -138,6 +122,33 @@ typedef enum {
     ERROR_FUERA_DE_LIMITE = -6,
     ERROR_CONEXION = -7
 } t_resultado_ejecucion;
+
+/***********************************************************************************************************************/
+/***                                                      ESTRUCTURAS PARA QUERIES                                  ***/
+/***********************************************************************************************************************/
+/**
+ * @brief Estructura para la asigancion de una nueva query
+ * @param id_query el ID de la query
+ * @param path_query el path de la query - char*
+ * @param pc el valor inicial del program counter - uint32_t
+ * @note Utilizado para caundo el master asigna una nueva query al worker
+ */
+typedef struct {
+    uint32_t id_query;   // ID de la query
+    char* path_query;  // PATH (string, serializado con longitud)
+    uint32_t pc;       // PC (binario, 4 bytes)
+} t_asignacion_query;
+
+/**
+ * @brief Estructura para notificar el resultado de ejecución de una Query
+ * @note Enviada desde Worker → Master → Query Control
+ */
+typedef struct {
+    uint32_t id_query;                    // ID de la query ejecutada
+    t_resultado_ejecucion estado;         // Estado final (EXEC_OK, EXEC_ERROR, etc.)
+    uint32_t pc_final;                    // PC donde terminó (útil para desalojos)
+    char* mensaje_error;                  // Mensaje descriptivo del error (NULL si OK)
+} t_resultado_query;
 
 // ============================================================================
 // TIPOS DE INSTRUCCIONES
