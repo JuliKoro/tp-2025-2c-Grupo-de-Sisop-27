@@ -3,9 +3,6 @@
 // Definición de la variable global de memoria (aquí vive realmente)
 memoria_interna* memoria_worker = NULL;
 
-// Referencias a variables externas definidas en worker.c
-extern t_log* logger_worker;
-
 memoria_interna* inicializar_memoria() {
     memoria_interna* mem = malloc(sizeof(memoria_interna));
     if (!mem) {

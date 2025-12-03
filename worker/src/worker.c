@@ -1,5 +1,8 @@
 #include "worker.h"
 
+// DEFINICIÓN DE VARIABLES GLOBALES
+// Nota porque no entendía: Solo tienen que definirse en UN archivo .c (el main es el mejor lugar)
+// SOCKETS
 int conexion_storage;
 int conexion_master;
 
@@ -11,14 +14,11 @@ pthread_mutex_t mutex_memoria;    // Protege: acceso a memoria_interna
 sem_t sem_query_asignada;    // Master señaliza que hay query nueva
 sem_t sem_query_terminada;   // Interpreter señaliza que terminó
 
-t_log* logger_worker = NULL;
+t_log* logger_worker = NULL; // LOGGER GLOBAL
 
-uint32_t id_worker; //La hice global para que se pueda usar en el hilo master
+uint32_t id_worker; // ID del Worker
 
 // REGISTROS Y FLAGS (declarados en registros.h)
-// DEFINICIÓN DE VARIABLES GLOBALES 
-// Se crea el espacio en memoria
-// Nota porque no entendía: Solo tienen que definirse en UN archivo .c (el main es el mejor lugar)
 uint32_t pc_actual = 0;
 char* path_query = NULL;
 uint32_t id_query = 0;
@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
     char* nombre_config = argv[1];
     id_worker = atoi(argv[2]);
 
-    inicializacion_worker(nombre_config, argv[2]);
+    inicializar_worker(nombre_config, argv[2]);
 
     // CONEXIONES
     if (conexiones_worker() == EXIT_FAILURE) {
@@ -82,18 +82,9 @@ int main(int argc, char* argv[]) {
     pthread_join(thread_master, NULL);
     pthread_join(thread_query_interpreter, NULL);
 
-    // DESTRUIR SEMAFOROS
-    sem_destroy(&sem_query_asignada);
-    sem_destroy(&sem_query_terminada);
-    pthread_mutex_destroy(&mutex_registros);
-    pthread_mutex_destroy(&mutex_memoria);
+    finalizar_worker();
 
-    // CERRAR SOCKETS
-    close(conexion_storage);
-    close(conexion_master);
 
-    // Limpieza de memoria al salir
-    destruir_memoria(memoria_worker);
 
     return 0;
 }
@@ -205,6 +196,8 @@ void* hilo_query_interpreter(void* arg){
         }
 
         pthread_mutex_lock(&mutex_registros);
+        // TODO: Hacer funcion desalojar_query() que haga flush de páginas modificadas
+        // TODO: Hacer FLUSH de todas las páginas modificadas
         // Limpiar estado
         resultado = EXEC_OK;
         pc_actual = 0;
@@ -226,7 +219,7 @@ void* hilo_query_interpreter(void* arg){
     return NULL;
 }
 
-void inicializacion_worker(char* nombre_config, char* id_worker_str){
+void inicializar_worker(char* nombre_config, char* id_worker_str){
     // CARGA CONFIGS (Se carga la variable global 'worker_configs')
     worker_configs = get_configs_worker(nombre_config);
     if (worker_configs == NULL) {
@@ -239,47 +232,29 @@ void inicializacion_worker(char* nombre_config, char* id_worker_str){
     log_debug(logger_worker, "Iniciado Worker ID: %d", id_worker);
 }
 
-int conexiones_worker(){ // Migrar a w_conexiones.c luego
-    //SOCKETS
-    char puerto_storage[10];
-    char puerto_master[10];
-    sprintf(puerto_storage, "%d", worker_configs->puerto_storage);
-    sprintf(puerto_master, "%d", worker_configs->puerto_master);
+void finalizar_worker(){
+    log_debug(logger_worker, "Finalizando Worker ID: %d", id_worker);
 
-    // Conectar con Storage.
-    conexion_storage = crear_conexion(worker_configs->ip_storage, puerto_storage);
-    if(conexion_storage == -1){
-        log_error(logger_worker, "Error al conectar con el modulo storage.");
-        return EXIT_FAILURE;
+    // DESTRUIR SEMAFOROS
+    sem_destroy(&sem_query_asignada);
+    sem_destroy(&sem_query_terminada);
+    pthread_mutex_destroy(&mutex_registros);
+    pthread_mutex_destroy(&mutex_memoria);
+
+    // CERRAR SOCKETS
+    close(conexion_storage);
+    close(conexion_master);
+
+    // Limpieza de memoria al salir
+    destruir_memoria(memoria_worker);
+
+    // Cierre de logger
+    if (logger_worker != NULL) {
+        log_destroy(logger_worker);
     }
 
-    // Handshake con Storage para recibir el tamaño de página
-    t_tam_pagina* tam_pagina = handshake_worker_storage(conexion_storage, id_worker);
-    if(tam_pagina == NULL){
-        log_error(logger_worker, "Error en el handshake con Storage.");
-        return EXIT_FAILURE;
+    // Liberar configuraciones
+    if (worker_configs != NULL) {
+        destruir_configs_worker(worker_configs);
     }
-    worker_configs->tam_pagina = tam_pagina->tam_pagina;
-    log_debug(logger_worker, "Handshake con Storage exitoso. Tamaño de página recibido: %d bytes", tam_pagina->tam_pagina);
-    free(tam_pagina);
-
-    // Conectar con Master.
-    conexion_master = crear_conexion(worker_configs->ip_master, puerto_master);
-    if(conexion_master == -1){
-        fprintf(stderr, "Error al conectar con el modulo storage.\n");
-        return EXIT_FAILURE;
-    }
-    // Handshake con Master
-    t_handshake_worker_master* handshakeMaster = generarHandshakeMaster(id_worker);
-
-    t_paquete* paquete = generarPaqueteMaster(HANDSHAKE_WORKER_MASTER, handshakeMaster);
-    
-    enviar_paquete(conexion_master, paquete);
-
-    confirmarRecepcion(conexion_master);
-    
-    limpiarMemoriaMaster(handshakeMaster);
-
-    return 0;
 }
-

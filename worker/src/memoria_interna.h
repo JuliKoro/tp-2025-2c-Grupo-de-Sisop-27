@@ -4,9 +4,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <commons/log.h>
-#include "tabla_de_paginas.h"
+
+#include <utils/loggeo.h>
 #include <utils/configs.h> //para worker_conf
+#include <utils/configs.h> //para worker_conf
+
+#include "registros.h" // para logger_worker
+#include "tabla_de_paginas.h"
 
 // Variable global de memoria (declarada como extern para que worker.c la vea)
 extern memoria_interna* memoria_worker;

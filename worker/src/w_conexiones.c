@@ -1,7 +1,48 @@
 #include "w_conexiones.h"
-#include <utils/hello.h>
-#include <utils/configs.h>
-#include <utils/mensajeria.h>
+
+int conexiones_worker(){
+    //SOCKETS
+    char puerto_storage[10];
+    char puerto_master[10];
+    sprintf(puerto_storage, "%d", worker_configs->puerto_storage);
+    sprintf(puerto_master, "%d", worker_configs->puerto_master);
+
+    // Conectar con Storage.
+    conexion_storage = crear_conexion(worker_configs->ip_storage, puerto_storage);
+    if(conexion_storage == -1){
+        log_error(logger_worker, "Error al conectar con el modulo storage.");
+        return EXIT_FAILURE;
+    }
+
+    // Handshake con Storage para recibir el tamaño de página
+    t_tam_pagina* tam_pagina = handshake_worker_storage(conexion_storage, id_worker);
+    if(tam_pagina == NULL){
+        log_error(logger_worker, "Error en el handshake con Storage.");
+        return EXIT_FAILURE;
+    }
+    worker_configs->tam_pagina = tam_pagina->tam_pagina;
+    log_debug(logger_worker, "Handshake con Storage exitoso. Tamaño de página recibido: %d bytes", tam_pagina->tam_pagina);
+    free(tam_pagina);
+
+    // Conectar con Master.
+    conexion_master = crear_conexion(worker_configs->ip_master, puerto_master);
+    if(conexion_master == -1){
+        fprintf(stderr, "Error al conectar con el modulo storage.\n");
+        return EXIT_FAILURE;
+    }
+    // Handshake con Master
+    t_handshake_worker_master* handshakeMaster = generarHandshakeMaster(id_worker);
+
+    t_paquete* paquete = generarPaqueteMaster(HANDSHAKE_WORKER_MASTER, handshakeMaster);
+    
+    enviar_paquete(conexion_master, paquete);
+
+    confirmarRecepcion(conexion_master);
+    
+    limpiarMemoriaMaster(handshakeMaster);
+
+    return 0;
+}
 
 t_handshake_worker_storage* generarHandshakeStorage(uint32_t id_worker) {
     t_handshake_worker_storage* handshake = malloc(sizeof(*handshake));
@@ -70,3 +111,4 @@ t_tam_pagina* handshake_worker_storage(int socket_storage, int id_worker) {
     destruir_paquete(paquete);
     return tam_pagina_struct;
 }
+

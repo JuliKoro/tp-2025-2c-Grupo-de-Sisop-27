@@ -43,20 +43,7 @@
  * 
  * @note Esta función termina el programa si falla la carga de configuración
  */
-void inicializacion_worker(char* nombre_config, char* id_worker_str);
-
-/**
- * @brief Establece las conexiones del Worker con otros módulos
- * 
- * Crea y configura las conexiones de red con los módulos Storage y Master.
- * Realiza el handshake inicial con ambos módulos para establecer la comunicación.
- * 
- * @return 0 si las conexiones se establecieron correctamente
- * @return EXIT_FAILURE si ocurre algún error en las conexiones
- * 
- * @note Utiliza las IPs y puertos configurados en el archivo de configuración
- */
-int conexiones_worker();
+void inicializar_worker(char* nombre_config, char* id_worker_str);
 
 /**
  * @brief Hilo que maneja la comunicación con el módulo Master
@@ -88,5 +75,17 @@ void* hilo_master(void* arg);
  * @note Este hilo corre en un bucle infinito procesando queries
  */
 void* hilo_query_interpreter(void* arg);
+
+/**
+ * @brief Finaliza el módulo Worker
+ * 
+ * Realiza la limpieza de recursos al finalizar la ejecución del Worker:
+ * - Destruye semáforos y mutex
+ * - Cierra conexiones de red
+ * - Libera memoria utilizada
+ * - Cierra el logger
+ * - Libera configuraciones cargadas
+ */
+void finalizar_worker();
 
 #endif

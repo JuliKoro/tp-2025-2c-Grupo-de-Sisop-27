@@ -31,8 +31,6 @@ t_resultado_ejecucion query_interpreter() {
     while (true) {
         // Verificar si se debe desalojar
         if (desalojar_query) {
-            // TODO: Hacer FLUSH de todas las páginas modificadas
-            resultado = flush_all(); // Falta hacer
             log_info(logger_worker, "## Query %d: Desalojada por pedido del Master", id_query);
             fclose(archivo);
             return EXEC_DESALOJO;

@@ -24,9 +24,32 @@
 #define W_CONEXIONES_H
 
 #include <utils/hello.h>
-#include <utils/configs.h>
 #include <utils/mensajeria.h>
-#include <utils/loggeo.h>
+
+#include "registros.h"
+
+/**
+ * @brief Socket de conexión con el módulo Storage
+ */
+extern int conexion_storage;
+
+/**
+ * @brief Socket de conexión con el módulo Master
+ */
+extern int conexion_master;
+
+/**
+ * @brief Establece las conexiones del Worker con otros módulos
+ * 
+ * Crea y configura las conexiones de red con los módulos Storage y Master.
+ * Realiza el handshake inicial con ambos módulos para establecer la comunicación.
+ * 
+ * @return 0 si las conexiones se establecieron correctamente
+ * @return EXIT_FAILURE si ocurre algún error en las conexiones
+ * 
+ * @note Utiliza las IPs y puertos configurados en el archivo de configuración
+ */
+int conexiones_worker();
 
 /**
  * @brief Logger global del módulo Worker

@@ -29,7 +29,24 @@
 #include <string.h>
 #include <stddef.h>
 
+#include <commons/log.h>
+
+#include <utils/configs.h>
 #include <utils/estructuras.h>
+
+// VARIABLES GLOBALES
+
+/**
+ * @brief Logger global del módulo Worker
+ * 
+ * @note Esta variable es compartida entre todos los archivos del Worker
+ */
+extern t_log* logger_worker;
+
+/**
+ * @brief Variable global para el ID del Worker
+ */
+extern uint32_t id_worker;                    // ID del Worker
 
 // REGISTROS
 
@@ -85,7 +102,6 @@ extern volatile bool query_en_ejecucion; // Flag: hay una Query activa?
  * 
  * @note Debe ser protegida con mutex en entornos multihilo
  */
-
  extern volatile bool desalojar_query;             // Flag para desalojo (chequeada en interpreter)
 //bool hay_query_activa = false;            // Flag para saber si hay una query activa (chequeada en master)
 #endif
