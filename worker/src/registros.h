@@ -11,8 +11,8 @@
  *   - Path de Query: Ruta del archivo de la query en ejecución
  * 
  * - **Flags**: Variables booleanas que controlan el flujo de ejecución
- *   - query_en_ejecucion: Indica si hay una query activa
- *   - desalojar_query: Señal para desalojar la query actual
+ *   - flag_query_activa: Indica si hay una query activa
+ *   - flag_desalojo_query: Señal para desalojar la query actual
  * 
  * @warning Estas variables globales deben ser protegidas con mutex en entornos
  *          multihilo para evitar condiciones de carrera
@@ -91,7 +91,7 @@ extern uint32_t id_query;
  * 
  * @note Debe ser protegida con mutex en entornos multihilo
  */
-extern volatile bool query_en_ejecucion; // Flag: hay una Query activa?
+extern volatile bool flag_query_activa; // Flag: hay una Query activa?
 
 /**
  * @brief Flag para solicitar el desalojo de la query actual
@@ -102,6 +102,6 @@ extern volatile bool query_en_ejecucion; // Flag: hay una Query activa?
  * 
  * @note Debe ser protegida con mutex en entornos multihilo
  */
- extern volatile bool desalojar_query;             // Flag para desalojo (chequeada en interpreter)
-//bool hay_query_activa = false;            // Flag para saber si hay una query activa (chequeada en master)
+ extern volatile bool flag_desalojo_query;             // Flag para desalojo (chequeada en interpreter)
+
 #endif

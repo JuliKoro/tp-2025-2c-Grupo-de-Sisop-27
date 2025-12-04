@@ -22,8 +22,8 @@ uint32_t id_worker; // ID del Worker
 uint32_t pc_actual = 0;
 char* path_query = NULL;
 uint32_t id_query = 0;
-volatile bool query_en_ejecucion = false;
-volatile bool desalojar_query = false;
+volatile bool flag_query_activa = false;
+volatile bool flag_desalojo_query = false;
 
 // Nota: memoria_worker ya no se declara acá porque está en memoria_interna.c y se accede via el header memoria_interna.h
 
@@ -104,8 +104,8 @@ void* hilo_master(void* arg){
         {
             case OP_ASIGNAR_QUERY: // Cuando Master asigna una Query al Worker
                 log_debug(logger_worker, "Solicitud de ASIGNAR_QUERY recibida.");
-                // Chequeo explícito de query_en_ejecucion antes de asignar
-                if (query_en_ejecucion) {
+                // Chequeo explícito de flag_query_activa antes de asignar
+                if (flag_query_activa) {
                     log_warning(logger_worker, "Intento de asignar nueva Query mientras hay una activa. Esperando fin...");
                     // Esperar a que termine la actual (Master no debería hacer esto, pero por seguridad)
                 }
@@ -120,8 +120,8 @@ void* hilo_master(void* arg){
                 id_query = query_asignada->id_query;
                 path_query = strdup(query_asignada->path_query);
                 pc_actual = query_asignada->pc;
-                query_en_ejecucion = true;
-                desalojar_query = false;
+                flag_query_activa = true;
+                flag_desalojo_query = false;
                 pthread_mutex_unlock(&mutex_registros);
 
                 log_info(logger_worker, "## Query %d: Se recibe la Query. El path de operaciones es: %s", id_query, path_query);
@@ -133,12 +133,12 @@ void* hilo_master(void* arg){
                 free(query_asignada);
                 break;
 
-            case OP_DESALOJAR_QUERY: // Cuando Master ordean desalojar la Query actual al Worker
-                log_debug(logger_worker, "Solicitud de DESALOJAR_QUERY recibida.");
+            case OP_flag_desalojo_query: // Cuando Master ordean desalojar la Query actual al Worker
+                log_debug(logger_worker, "Solicitud de flag_desalojo_query recibida.");
 
                 pthread_mutex_lock(&mutex_registros);
-                if (query_en_ejecucion) {
-                    desalojar_query = true; // Interpreter lo chequeará
+                if (flag_query_activa) {
+                    flag_desalojo_query = true; // Interpreter lo chequeará
                 } else {
                     log_warning(logger_worker, "Se recibió desalojo pero no hay query en ejecución.");
                 }
@@ -151,8 +151,8 @@ void* hilo_master(void* arg){
             case OP_FIN_QUERY: // Si el Master cancela una query ("Desconexión de Query Control")
                 log_debug(logger_worker, "Solicitud de FIN_QUERY (cancelación) recibida.");
                 pthread_mutex_lock(&mutex_registros);
-                if (query_en_ejecucion) {
-                    desalojar_query = true; // Interpreter lo chequeará
+                if (flag_query_activa) {
+                    flag_desalojo_query = true; // Interpreter lo chequeará
                     // mismo flag para forzar la detención
                     // setear otro flag "fue_cancelada" para
                     // diferenciar entre desalojo (pausa) y cancelación (fin).
@@ -196,18 +196,7 @@ void* hilo_query_interpreter(void* arg){
         }
 
         pthread_mutex_lock(&mutex_registros);
-        // TODO: Hacer funcion desalojar_query() que haga flush de páginas modificadas
-        // TODO: Hacer FLUSH de todas las páginas modificadas
-        // Limpiar estado
-        resultado = EXEC_OK;
-        pc_actual = 0;
-        id_query = 0;
-        query_en_ejecucion = false;
-        desalojar_query = false;
-        if (path_query != NULL) {
-            free(path_query);
-            path_query = NULL;
-        }
+        desalojar_query(); // Limpiar estado de la query
         pthread_mutex_unlock(&mutex_registros);
         
         // Señalizar que terminó y puede recibir otra query
@@ -230,6 +219,21 @@ void inicializar_worker(char* nombre_config, char* id_worker_str){
     // INICIO LOGGERS
     logger_worker = iniciarLoggerWorker(id_worker_str, worker_configs->log_level);
     log_debug(logger_worker, "Iniciado Worker ID: %d", id_worker);
+}
+
+void desalojar_query(){
+    // Hacer flush de páginas modificadas
+    //flush_all(memoria_worker); // TODO memoria_interna.c
+    // Limpiar estado
+    //resultado = EXEC_OK;
+    pc_actual = 0;
+    id_query = 0;
+    flag_query_activa = false;
+    flag_desalojo_query = false;
+    if (path_query != NULL) {
+        free(path_query);
+        path_query = NULL;
+    }
 }
 
 void finalizar_worker(){

@@ -50,7 +50,7 @@ void inicializar_worker(char* nombre_config, char* id_worker_str);
  * 
  * Este hilo se ejecuta continuamente esperando mensajes del Master, que pueden ser:
  * - OP_ASIGNAR_QUERY: Asigna una nueva query para ejecutar
- * - OP_DESALOJAR_QUERY: Solicita desalojar la query actual
+ * - OP_flag_desalojo_query: Solicita desalojar la query actual
  * - OP_FIN_QUERY: Notifica la finalización de una query
  * 
  * El hilo actualiza el estado del Worker (PC, path de query, flags) según
@@ -75,6 +75,15 @@ void* hilo_master(void* arg);
  * @note Este hilo corre en un bucle infinito procesando queries
  */
 void* hilo_query_interpreter(void* arg);
+
+/**
+ * @brief Desaloja la query actual
+ * 
+ * Realiza las operaciones necesarias para desalojar la query en ejecución:
+ * - Hace flush de todas las páginas modificadas a Storage
+ * - Limpia el estado del Worker (PC, ID de query, flags)
+ */
+void desalojar_query();
 
 /**
  * @brief Finaliza el módulo Worker

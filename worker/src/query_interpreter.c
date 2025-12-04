@@ -30,7 +30,7 @@ t_resultado_ejecucion query_interpreter() {
     // Ciclo de instruccion
     while (true) {
         // Verificar si se debe desalojar
-        if (desalojar_query) {
+        if (flag_desalojo_query) {
             log_info(logger_worker, "## Query %d: Desalojada por pedido del Master", id_query);
             fclose(archivo);
             return EXEC_DESALOJO;
@@ -545,7 +545,7 @@ bool notificar_resultado_a_master(t_resultado_ejecucion estado) {
     } else {
         resultado->mensaje_error = NULL;
         if (estado == EXEC_FIN_QUERY) codigo_op = OP_FIN_QUERY;
-        else if (estado == EXEC_DESALOJO) codigo_op = OP_DESALOJAR_QUERY;
+        else if (estado == EXEC_DESALOJO) codigo_op = OP_flag_desalojo_query;
     }
     
     t_buffer* buffer = serializar_resultado_query(resultado);
