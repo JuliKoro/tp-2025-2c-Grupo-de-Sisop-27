@@ -132,4 +132,6 @@ void inicializarPuntoMontaje(char* path);
  */
 void cargarPuntoMontaje(char* path);
 
+
+
 #endif

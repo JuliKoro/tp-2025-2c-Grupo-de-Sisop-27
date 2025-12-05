@@ -68,14 +68,18 @@ int main(int argc, char* argv[]) {
     }
 
 
-    log_debug(g_logger_storage, "Testeo de operacion leer");
+    log_debug(g_logger_storage, "Testeo de operacion eliminar tag");
     
-    void* bufferTest = leer(9999, "initial_file", "BASE", 0);
+    int resultado_eliminar = eliminarTag(1, "segundaprueba", "unu");
 
-    mem_hexdump(bufferTest, g_superblock_config->block_size);
+    if(resultado_eliminar == 0){
+        log_debug(g_logger_storage, "Operacion eliminar exitosa");
+    } else {
+        log_debug(g_logger_storage, "Operacion eliminar fallo");
+    }
 
-    log_debug(g_logger_storage, "Testeo de operacion leer");
-    
+    log_debug(g_logger_storage, "Testeo de operacion eliminar tag finalizado");
+
     while (1) {
         log_info(g_logger_storage, "Iniciando ciclo de espera de clientes");
         pthread_t thread;

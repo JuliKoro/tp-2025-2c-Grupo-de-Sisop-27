@@ -258,3 +258,109 @@ void* leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloque
     return NULL;
     
 }
+
+ void liberarBloqueSiEsNecesario(u_int32_t query_id, int numeroBloque){
+    char* pathBloqueFisico = string_from_format("%s/physical_blocks/block%04d.dat", g_storage_config->punto_montaje, numeroBloque);
+    struct stat st = {0};
+
+    if (stat(pathBloqueFisico, &st) == -1) {
+        log_error(g_logger_storage, "Error al hacer stat del bloque físico %d para liberación", numeroBloque);
+        free(pathBloqueFisico);
+        return;
+    }
+
+    // Si st_nlink es 1, significa que solo queda la referencia dentro de /physical_blocks.
+    // Ningún archivo lógico (en /files) lo está apuntando.
+    if (st.st_nlink == 1) {
+        pthread_mutex_lock(&g_mutexBitmap);
+        if (bitarray_test_bit(g_bitmap, numeroBloque)) {
+            bitarray_clean_bit(g_bitmap, numeroBloque);
+            log_debug(g_logger_storage, "##<QUERY ID %d> Bloque físico %d liberado en bitmap (nlink=1).", query_id, numeroBloque);
+        }
+        pthread_mutex_unlock(&g_mutexBitmap);
+    } else {
+        log_debug(g_logger_storage, "Bloque físico %d NO liberado. Tiene %lu referencias restantes.", numeroBloque, st.st_nlink);
+    }
+
+    free(pathBloqueFisico);
+}
+
+ 
+
+int eliminarTag(u_int32_t query_id, char* nombreFile, char* nombreTag){
+    simularRetardoOperacion();
+    log_info(g_logger_storage, "QUERY ID: %d Iniciando operación DELETE para file: %s, tag: %s",query_id, nombreFile, nombreTag);
+
+    char* pathFile = string_from_format("%s/files/%s", 
+                                        g_storage_config->punto_montaje, 
+                                        nombreFile);
+
+    char* pathTag = string_from_format("%s/%s", 
+                                       pathFile, 
+                                       nombreTag);
+
+    char* pathMetadata = string_from_format("%s/metadata.config", 
+                                            pathTag);
+
+
+    int status = -1;
+    struct stat st = {0};
+    t_config* metadataConfig = NULL;
+    char** bloquesLogicos = NULL;
+
+    //Valido existencia file
+
+    if(stat(pathFile, &st) == -1) {
+        log_error(g_logger_storage, "Error DELETE: El archivo %s no existe.", nombreFile);
+        goto cleanup;
+    }
+
+    //Leo metadata.config del tag para ver los blooques asignados
+
+    metadataConfig = config_create(pathMetadata);
+    if (metadataConfig == NULL) {
+        log_error(g_logger_storage, "Error DELETE: No se pudo leer el metadata.config en %s.", pathTag);
+        goto cleanup;
+    }
+
+    bloquesLogicos = config_get_array_value(metadataConfig, "BLOCKS");
+
+    //Borro el directorio del tag, se van a borrar hard links
+    char* comandoRemove = string_from_format("rm -rf %s", pathTag);
+    int resultadoRemove = system(comandoRemove);
+    free(comandoRemove);
+
+
+    if (resultadoRemove != 0) {
+        log_error(g_logger_storage, "Error al ejecutar rm -rf para eliminar el tag %s", pathTag);
+        goto cleanup;
+    }
+    log_info(g_logger_storage,"##<QUERY_ID %d> - Tag eliminado <%s>:<%s>", query_id, nombreFile, nombreTag);
+
+    //Hay que actualizar bitmap, liberar bloques huerfanos
+
+    int i = 0;
+    while(bloquesLogicos[i] != NULL) {
+        int nroBloque = atoi(bloquesLogicos[i]);
+        
+        liberarBloqueSiEsNecesario(query_id, nroBloque);
+        if (!bitarray_test_bit(g_bitmap, nroBloque)) { // Chequeo rápido post-liberación (sin lock, solo para log)
+             log_info(g_logger_storage, "##<QUERY_ID %d> - Bloque Físico Liberado %d", query_id, nroBloque);
+        }
+
+        i++;
+    }
+
+
+    status = 0;
+    log_info(g_logger_storage, "Operación DELETE finalizada exitosamente.");
+
+    cleanup:
+    if (bloquesLogicos) string_array_destroy(bloquesLogicos);
+    if (metadataConfig) config_destroy(metadataConfig);
+    free(pathFile);
+    free(pathTag);
+    free(pathMetadata);
+
+    return status;
+}
