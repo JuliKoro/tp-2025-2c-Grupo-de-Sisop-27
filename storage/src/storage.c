@@ -13,6 +13,32 @@ storage_conf* g_storage_config = NULL;
 
 superblock_conf* g_superblock_config = NULL;
 
+void test_truncate() {
+    log_info(g_logger_storage, "=== TEST TRUNCATE ===");
+    char* archivo = "ArchivoTrunc";
+    char* tag = "TagTrunc";
+
+    // 1. Crear (Tamaño 0)
+    create(20, archivo, tag);
+
+    // 2. Agrandar a 256 bytes (asumiendo bloque de 128 -> 2 bloques)
+    // Deberían apuntar al bloque 0
+    truncate_file(20, archivo, tag, 256); 
+
+    // Verificación manual (ls -l o leer metadata)
+    // Metadata debería decir BLOCKS=[0,0]
+
+    // 3. Agrandar más (a 384 bytes -> 3 bloques)
+    truncate_file(20, archivo, tag, 384);
+    // Metadata: BLOCKS=[0,0,0]
+
+    // 4. Achicar a 128 bytes (1 bloque)
+    // Debería borrar los ultimos 2 links.
+    truncate_file(20, archivo, tag, 128);
+    // Metadata: BLOCKS=[0]
+    
+    log_info(g_logger_storage, "=== FIN TEST TRUNCATE ===");
+}
 
 int main(int argc, char* argv[]) {
     saludar("storage");
@@ -68,17 +94,7 @@ int main(int argc, char* argv[]) {
     }
 
 
-    log_debug(g_logger_storage, "Testeo de operacion eliminar tag");
-    
-    int resultado_eliminar = eliminarTag(1, "segundaprueba", "unu");
-
-    if(resultado_eliminar == 0){
-        log_debug(g_logger_storage, "Operacion eliminar exitosa");
-    } else {
-        log_debug(g_logger_storage, "Operacion eliminar fallo");
-    }
-
-    log_debug(g_logger_storage, "Testeo de operacion eliminar tag finalizado");
+    test_truncate();
 
     while (1) {
         log_info(g_logger_storage, "Iniciando ciclo de espera de clientes");

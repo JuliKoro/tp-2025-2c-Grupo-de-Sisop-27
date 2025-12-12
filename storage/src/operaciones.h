@@ -63,4 +63,29 @@ void liberarBloqueSiEsNecesario(u_int32_t query_id, int numeroBloque);
  */
 int eliminarTag(u_int32_t query_id, char* nombreFile, char* nombreTag);
 
+
+/** 
+ * @brief Convierte un array de cadenas que representan números en una lista de enteros.
+ * @param blocks_str Array de cadenas que representan números.
+ * @return Lista de enteros convertidos.
+ */
+t_list* blocks_to_list(char** blocks_array);
+
+/** 
+ * @brief Convierte una lista de enteros en una representación de cadena en formato de array.
+ * @param lista Lista de enteros a convertir.
+ * @return Cadena que representa la lista en formato de array.
+ */
+char* list_to_string_array(t_list* lista);
+
+/** 
+ * @brief Trunca un archivo a un nuevo tamaño especificado.
+ * @param query_id Identificador de la query
+ * @param nombreFile Nombre del archivo a truncar.
+ * @param nombreTag Nombre del tag 
+ * @param nuevoTamanio Nuevo tamaño al cual se truncará el archivo.
+ * @return 0 si el truncamiento fue exitoso, -1 en caso de error.
+ */
+int truncate_file(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t nuevoTamanio);
+
 #endif

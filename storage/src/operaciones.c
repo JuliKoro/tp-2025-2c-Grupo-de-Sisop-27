@@ -279,7 +279,7 @@ void* leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloque
         }
         pthread_mutex_unlock(&g_mutexBitmap);
     } else {
-        log_debug(g_logger_storage, "Bloque físico %d NO liberado. Tiene %lu referencias restantes.", numeroBloque, st.st_nlink);
+        log_debug(g_logger_storage, "Bloque físico %d NO liberado. Tiene %u referencias restantes.", numeroBloque, st.st_nlink);
     }
 
     free(pathBloqueFisico);
@@ -358,6 +358,171 @@ int eliminarTag(u_int32_t query_id, char* nombreFile, char* nombreTag){
     cleanup:
     if (bloquesLogicos) string_array_destroy(bloquesLogicos);
     if (metadataConfig) config_destroy(metadataConfig);
+    free(pathFile);
+    free(pathTag);
+    free(pathMetadata);
+
+    return status;
+}
+
+
+t_list* blocks_to_list(char** blocks_str) {
+    t_list* lista = list_create();
+    if (blocks_str == NULL) return lista;
+
+    for (int i = 0; blocks_str[i] != NULL; i++) {
+        int* nro = malloc(sizeof(int));
+        *nro = atoi(blocks_str[i]);
+        list_add(lista, nro);
+    }
+    return lista;
+}
+
+char* list_to_string_array(t_list* lista) {
+    char* str = string_new();
+    string_append(&str, "[");
+    
+    for (int i = 0; i < list_size(lista); i++) {
+        int* nro = list_get(lista, i);
+        char* nro_str = string_itoa(*nro);
+        string_append(&str, nro_str);
+        if (i < list_size(lista) - 1) {
+            string_append(&str, ",");
+        }
+        free(nro_str);
+    }
+    string_append(&str, "]");
+    return str;
+}
+
+int truncate_file(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t nuevoTamanio){
+    simularRetardoOperacion();
+    log_info(g_logger_storage, "QUERY ID: %d Iniciando operación TRUNCATE para file: %s, tag: %s, nuevoTamanio: %d",query_id, nombreFile, nombreTag, nuevoTamanio);
+
+    char* pathFile = string_from_format("%s/files/%s", g_storage_config->punto_montaje, nombreFile);
+    char* pathTag = string_from_format("%s/%s", pathFile, nombreTag);
+    char* pathMetadata = string_from_format("%s/metadata.config", pathTag);
+
+    int status = -1;
+    t_config* metadata = NULL;
+    t_list* lista_bloques = NULL;
+    char** blocks_str = NULL;
+    char* blocks_formatted = NULL;
+
+    //Algunas validaciones
+
+    struct stat st;
+    if (stat(pathTag, &st) == -1) {
+        log_error(g_logger_storage, "Error TRUNCATE: El File:Tag %s:%s no existe.", nombreFile, nombreTag);
+        goto cleanup;
+    }
+
+
+    metadata = config_create(pathMetadata);
+    if (!metadata) {
+        log_error(g_logger_storage, "Error TRUNCATE: No se pudo abrir metadata.");
+        goto cleanup;
+    }
+
+    //Me fijo que no este COMMITED
+
+    char* estado = config_get_string_value(metadata, "ESTADO");
+    if (strcmp(estado, "COMMITED") == 0) {
+        log_error(g_logger_storage, "Error TRUNCATE: El archivo está COMMITED, no se puede modificar.");
+        goto cleanup;
+    }
+
+    //Calculo el tamanio del bloque
+    int block_size = g_superblock_config->block_size;
+
+    //Me fijo que el nuevo tamanio sea multiplo del block_size
+    if (nuevoTamanio % block_size != 0) {
+        log_error(g_logger_storage, "Error TRUNCATE: El tamaño %d no es múltiplo del block_size %d", nuevoTamanio, block_size);
+        goto cleanup;
+    }
+
+
+    int bloques_necesarios = nuevoTamanio / block_size;
+    blocks_str = config_get_array_value(metadata, "BLOCKS");
+    lista_bloques = blocks_to_list(blocks_str);
+    int bloques_actuales = list_size(lista_bloques);
+
+    log_debug(g_logger_storage, "Truncate: Bloques Actuales: %d -> Bloques Necesarios: %d", bloques_actuales, bloques_necesarios);
+     
+
+    //Ahora el truncate
+
+    // AGRANDAR
+    if (bloques_necesarios > bloques_actuales) {
+        char* path_fisico_0 = string_from_format("%s/physical_blocks/block0000.dat", g_storage_config->punto_montaje);
+        
+        for (int i = bloques_actuales; i < bloques_necesarios; i++) {
+            // 1. Creo hard link apuntando al bloque 0
+            char* path_logico = string_from_format("%s/logical_blocks/%06d.dat", pathTag, i);
+            
+            if (link(path_fisico_0, path_logico) == -1) {
+                log_error(g_logger_storage, "Error al crear link al bloque 0 para el bloque lógico %d", i);
+                free(path_logico);
+                free(path_fisico_0);
+                goto cleanup; 
+            }
+            free(path_logico);
+
+            // 2. Agrego '0' a la lista en memoria
+            int* nuevo_bloque = malloc(sizeof(int));
+            *nuevo_bloque = 0;
+            list_add(lista_bloques, nuevo_bloque);
+            
+            // Log obligatorio: Hard Link Agregado
+            log_info(g_logger_storage, "##<QUERY_ID %d> - Hard Link Agregado <File:Tag> %s:%s - Bloque Lógico %d ref a Bloque Físico 0", query_id, nombreFile, nombreTag, i);
+        }
+        free(path_fisico_0);
+    } // ACHICAR 
+    else if (bloques_necesarios < bloques_actuales) {
+        for (int i = bloques_actuales - 1; i >= bloques_necesarios; i--) {
+            // 1. Obtener qué bloque físico es (para ver si hay que liberarlo del bitmap)
+            int* ptr_nro = list_get(lista_bloques, i);
+            int bloque_fisico = *ptr_nro;
+
+            // 2. Eliminar el hard link
+            char* path_logico = string_from_format("%s/logical_blocks/%06d.dat", pathTag, i);
+            if (unlink(path_logico) == -1) {
+                log_error(g_logger_storage, "Error al borrar hard link lógico %d", i);
+                free(path_logico);
+                goto cleanup;
+            }
+            free(path_logico);
+            
+            // Log obligatorio: Hard Link Eliminado
+            log_info(g_logger_storage, "##<QUERY_ID %d> - Hard Link Eliminado <File:Tag> %s:%s - Bloque Lógico %d ref a Bloque Físico %d", query_id, nombreFile, nombreTag, i, bloque_fisico);
+
+            // 3. Verificar Bitmap
+            liberarBloqueSiEsNecesario(query_id, bloque_fisico);
+
+            // 4. Quitar de la lista (Memory cleanup del int*)
+            free(list_remove(lista_bloques, i));
+        }
+    }
+
+    // Guardo cambios en Metadata
+    blocks_formatted = list_to_string_array(lista_bloques);
+    char* size_str = string_itoa(nuevoTamanio);
+    
+    config_set_value(metadata, "BLOCKS", blocks_formatted);
+    config_set_value(metadata, "TAMAÑO", size_str);
+    config_save(metadata);
+    
+    status = 0;
+    log_info(g_logger_storage, "##<QUERY_ID %d> - File Truncado %s:%s Nuevo Tamaño: %d", query_id, nombreFile, nombreTag, nuevoTamanio);
+
+    // Cleanup local
+    free(blocks_formatted);
+    free(size_str);
+
+    cleanup:
+    if (metadata) config_destroy(metadata);
+    if (lista_bloques) list_destroy_and_destroy_elements(lista_bloques, free);
+    if (blocks_str) string_array_destroy(blocks_str);
     free(pathFile);
     free(pathTag);
     free(pathMetadata);
