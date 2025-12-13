@@ -1,6 +1,9 @@
 #include "conexion.h"
 #include "m_funciones.h"
 
+// Traemos variable externa para actualizar nivel de multiprogramación
+extern pthread_mutex_t mutexNivelMultiprogramacion;
+
 void* iniciar_receptor(void* socket_servidor) {
     int socket_servidor_ptr = *((int*) socket_servidor); //Casteo a int* y desreferencio
     log_debug(logger_master, "Socket casteado y desreferenciado: %d, procedo a escuchar conexiones", socket_servidor_ptr);
@@ -76,21 +79,93 @@ void* atender_query_control(void* thread_args) {
             destruir_paquete(paquete);
             break;
         }
+        destruir_paquete(paquete); // Liberar paquetes recibidos si los hubiera
     }
+    free(conexion_query_control_ptr);
+    free(thread_args_ptr);
     return NULL;
 }
+
+
+// -----------------------------------------------------------------------------
+// --- GESTIÓN DE WORKERS: Registro, Lista y Bucle de Escucha ---
+// -----------------------------------------------------------------------------
 
 void* atender_worker(void* thread_args) {
     t_thread_args* thread_args_ptr = (t_thread_args*) thread_args;
     t_paquete* paquete_ptr = thread_args_ptr->paquete;
-    int* conexion_query_control_ptr = thread_args_ptr->fd_conexion;
+    int* conexion_worker_ptr = thread_args_ptr->fd_conexion;
 
+    // Deserializar handshake para obtener ID
     t_handshake_worker_master* handshake = deserializar_handshake_worker_master(paquete_ptr->datos);
     log_info(logger_master, "Worker conectado con ID: %d", handshake->id_worker);
 
-    enviar_string(*conexion_query_control_ptr, "Master dice: Handshake recibido");
+    // Responder al handshake
+    enviar_string(*conexion_worker_ptr, "Master dice: Handshake recibido");
 
+    // Crear estructura interna y agregarlo a la lista
+    t_worker_interno* nuevoWorker = malloc(sizeof(t_worker_interno));
+    nuevoWorker->socket_fd = *conexion_worker_ptr;
+    nuevoWorker->id_worker = handshake->id_worker;
+    nuevoWorker->libre = true; // Al conectarse está libre inicialmente
+
+    pthread_mutex_lock(&mutexListaWorkers);
+    list_add(listaWorkers, nuevoWorker);
+    pthread_mutex_unlock(&mutexListaWorkers);
+    log_info(logger_master, "Worker ID %d agregado a la lista de workers", nuevoWorker->id_worker);
+
+    // Actualizar nivel de multiprogramación (cantidad de workers conectados)
+    pthread_mutex_lock(&mutexNivelMultiprogramacion);
+    nivelMultiprogramacion++;
+    pthread_mutex_unlock(&mutexNivelMultiprogramacion);
+    log_info(logger_master, "## Se conecta el Worker %d. Cantidad total de Workers: %d", 
+        nuevoWorker->id_worker, nivelMultiprogramacion);
+
+    // Liberar memoria temporal de handshake
     destruir_paquete(paquete_ptr);
     free(handshake);
+
+    // BUCLE PRINCIPAL DE ESCUCHA 
+    // El hilo se queda aca esperando mensajes de este Worker específico
+    while(1) {
+        t_paquete* paquete = recibir_paquete(nuevoWorker->socket_fd);  
+        
+        if(paquete == NULL) {
+            // DESCONEXIÓN DEL WORKER
+            log_warning(logger_master, "Worker %d se desconectó.", nuevoWorker->id_worker);
+            break;
+        }
+
+        // ACÁ PROCESARÍAMOS LOS MENSAJES FUTUROS DEL WORKER
+        // Ej: case OP_FIN_QUERY: ... marcar libre, etc.
+        log_info(logger_master, "Mensaje recibido del Worker %d (código operación: %d)", 
+            nuevoWorker->id_worker, paquete->codigo_operacion);
+
+        destruir_paquete(paquete);
+    }
+
+    // LIMPIEZA POST DESCONEXIÓN
+    // Eliminar de la lista de workers
+    pthread_mutex_lock(&mutexListaWorkers);
+
+    // Usamos list_remove_element que es estándar y busca por puntero.
+    list_remove_element(listaWorkers, nuevoWorker);
+
+    pthread_mutex_unlock(&mutexListaWorkers);
+
+    // Decrementar nivel de multiprogramación
+    pthread_mutex_lock(&mutexNivelMultiprogramacion);
+    nivelMultiprogramacion--;
+    pthread_mutex_unlock(&mutexNivelMultiprogramacion);
+
+    log_info(logger_master, "## Se desconecta el Worker %d. Cantidad total de Workers: %d", 
+        nuevoWorker->id_worker, nivelMultiprogramacion);
+
+    // TODO: Si el worker estaba ejecutando algo (nuevoWorker->libre == false), manejar el fallo de esa query aca.
+
+    free(nuevoWorker);
+    free(conexion_worker_ptr);
+    free(thread_args_ptr);
+
     return NULL;
 }
