@@ -1,12 +1,15 @@
 #ifndef M_FUNCIONES_H
 #define M_FUNCIONES_H   
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <utils/loggeo.h>
 #include <utils/configs.h>
 #include <pthread.h>
 #include <commons/collections/list.h>
+#include <utils/estructuras.h>
 
-
+// Variables globales
 extern t_log* logger_master;
 
 extern int identificadorQueryGlobal; //La inicilizamos en master.c, en 0
@@ -18,18 +21,26 @@ extern t_list* listaQueriesReady;
 extern t_list* listaQueriesExec;
 extern t_list* listaQueriesExit;
 
+// Lista global de Workers 
+extern t_list* listaWorkers;
+
 extern pthread_mutex_t mutexListaQueriesReady;
 extern pthread_mutex_t mutexListaQueriesExec;
 extern pthread_mutex_t mutexListaQueriesExit;
 extern pthread_mutex_t mutexIdentificadorQueryGlobal; 
 extern pthread_mutex_t mutexNivelMultiprogramacion;
+// Mutex para la lista de workers 
+extern pthread_mutex_t mutexListaWorkers;
 
+// Definición de estados para las queries
 typedef enum {
     Q_READY=0,
     Q_EXEC,
     Q_EXIT
 } e_estado_query;
 
+
+// Estructura interna para representar una Query en el Master
 typedef struct{
     uint32_t id_query;
     uint8_t prioridad;
@@ -38,6 +49,15 @@ typedef struct{
     int socketQuery; //socket para comunicarse con el query control que envio la query
     //Quiza haga falta un semaforo para manejar el estado de la query
 } t_query;
+
+
+// Estructura interna para representar un Worker 
+typedef struct {
+    int socket_fd;
+    uint32_t id_worker;
+    bool libre; // true = LIBRE, false = OCUPADO
+} t_worker_interno;
+
 
 /**
  * @brief: Inicializa las listas de queries (ready, exec, exit).
