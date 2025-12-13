@@ -283,6 +283,7 @@ t_buffer* serializar_resultado_query(t_resultado_query* resultado);
  */
 t_resultado_query* deserializar_resultado_query(t_buffer* buffer);
 
+
 // ============================================================================
 // SERIALIZACION DE INSTRUCCIONES
 // ============================================================================

@@ -28,6 +28,14 @@ int main(int argc, char* argv[]) {
     pthread_create(&threadReceptor, NULL, iniciar_receptor, &socket_servidor);
     pthread_detach(threadReceptor);
 
+    //Hilo Planificador (Corto Plazo)
+    pthread_t threadPlanificador;
+    pthread_create(&threadPlanificador, NULL, iniciar_planificador, NULL);
+    // No hacemos detach si queremos esperar al final, pero como es un servicio continuo:
+    pthread_detach(threadPlanificador);
+
+    log_info(logger_master, "Master iniciado correctamente. Esperando conexiones...");
+
     //Tests de manejo de listas
     log_debug(logger_master, "Duermo 10 segundos para que se conecte un QC y mande una query");
     sleep(10); 

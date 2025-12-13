@@ -1,5 +1,6 @@
 #include "m_funciones.h"
 
+
 char const* estadosQuery[] = {"Q_READY", "Q_EXEC", "Q_EXIT"};
 
 t_list* listaQueriesReady = NULL;
@@ -144,4 +145,100 @@ void actualizarEstadoQuery(t_query* query, e_estado_query nuevoEstado){
         }
 
     }
+}
+
+//-------------------FIFO-------------------
+
+t_worker_interno* obtener_worker_libre() {
+    t_worker_interno* worker_encontrado = NULL;
+    
+    pthread_mutex_lock(&mutexListaWorkers);
+    
+    // Iteramos la lista buscando el primer worker con libre == true
+    for (int i = 0; i < list_size(listaWorkers); i++) {
+        t_worker_interno* worker = list_get(listaWorkers, i);
+        if (worker->libre) {
+            worker_encontrado = worker;
+            break; 
+        }
+    }
+    
+    pthread_mutex_unlock(&mutexListaWorkers);
+    return worker_encontrado;
+}
+
+t_query* obtener_siguiente_query_fifo() {
+    t_query* query = NULL;
+    
+    pthread_mutex_lock(&mutexListaQueriesReady);
+    if (!list_is_empty(listaQueriesReady)) {
+        // En FIFO, siempre sacamos el primero de la lista (índice 0)
+        // NOTA: No hacemos list_remove aquí, solo obtenemos el puntero.
+        // La función actualizarEstadoQuery se encargará de moverla.
+        query = list_get(listaQueriesReady, 0);
+    }
+    pthread_mutex_unlock(&mutexListaQueriesReady);
+    
+    return query;
+}
+
+void* iniciar_planificador(void* arg) {
+    log_info(logger_master, "Planificador de Corto Plazo iniciado.");
+
+    while (1) {
+        // 1. Verificar si hay queries pendientes en READY
+        // (Usamos mutex para lectura segura, aunque obtener_siguiente lo hace también)
+        pthread_mutex_lock(&mutexListaQueriesReady);
+        bool hay_queries = !list_is_empty(listaQueriesReady);
+        pthread_mutex_unlock(&mutexListaQueriesReady);
+
+        if (hay_queries) {
+            // 2. Verificar si hay Workers LIBRES
+            t_worker_interno* worker_elegido = obtener_worker_libre();
+
+            if (worker_elegido != NULL) {
+                // 3. Obtener la siguiente query según algoritmo (Por ahora FIFO)
+                t_query* query_a_ejecutar = obtener_siguiente_query_fifo();
+
+                if (query_a_ejecutar != NULL) {
+                    log_info(logger_master, "Asignando Query %d al Worker %d", 
+                             query_a_ejecutar->id_query, worker_elegido->id_worker);
+
+                    // 4. Mover Query a estado EXEC (Esto la saca de READY y la pone en EXEC)
+                    actualizarEstadoQuery(query_a_ejecutar, Q_EXEC);
+
+                    // 5. Marcar worker como OCUPADO
+                    pthread_mutex_lock(&mutexListaWorkers);
+                    worker_elegido->libre = false;
+                    pthread_mutex_unlock(&mutexListaWorkers);
+
+                    // 6. Enviar la query al Worker (Serialización y Envío)
+                    // Creamos la estructura que espera el worker (ver utils/estructuras.h)
+                    t_asignacion_query* asignacion = malloc(sizeof(t_asignacion_query));
+                    asignacion->id_query = query_a_ejecutar->id_query;
+                    asignacion->path_query = strdup(query_a_ejecutar->archivoQuery);
+                    asignacion->pc = 0; // Inicialmente PC es 0 (luego manejaremos desalojo)
+
+                    t_paquete* paquete = malloc(sizeof(t_paquete));
+                    paquete->codigo_operacion = OP_ASIGNAR_QUERY; // Necesitas definir este OpCode en utils
+                    paquete->datos = serializar_asignacion_query(asignacion);
+
+                    enviar_paquete(worker_elegido->socket_fd, paquete);
+                    
+                    // Limpieza temporal
+                    free(asignacion->path_query);
+                    free(asignacion);
+                    // (paquete se libera dentro de enviar_paquete)
+                }
+            } else {
+                // No hay workers libres, esperamos un poco
+                // log_trace(logger_master, "No hay workers libres. Esperando...");
+            }
+        }
+
+        // Evitar Busy Wait agresivo (Consumo 100% CPU)
+        // Dormimos 100ms o 500ms
+        usleep(500000); 
+    }
+    return NULL;
 }

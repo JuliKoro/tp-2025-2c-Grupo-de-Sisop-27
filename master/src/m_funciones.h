@@ -8,6 +8,8 @@
 #include <pthread.h>
 #include <commons/collections/list.h>
 #include <utils/estructuras.h>
+#include <utils/mensajeria.h>
+
 
 // Variables globales
 extern t_log* logger_master;
@@ -97,6 +99,13 @@ void queryAExit(t_query* query);
  */
 void actualizarEstadoQuery(t_query* query, e_estado_query nuevoEstado);
 
+//funciones para planificador
+void* iniciar_planificador(void* arg);
 
+t_worker_interno* obtener_worker_libre();
+
+t_query* obtener_siguiente_query_fifo();
+
+// t_query* obtener_siguiente_query_prioridades(); // Para más adelante
 
 #endif
