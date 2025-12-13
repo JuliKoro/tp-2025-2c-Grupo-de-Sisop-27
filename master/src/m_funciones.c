@@ -5,24 +5,32 @@ char const* estadosQuery[] = {"Q_READY", "Q_EXEC", "Q_EXIT"};
 t_list* listaQueriesReady = NULL;
 t_list* listaQueriesExec = NULL;
 t_list* listaQueriesExit = NULL;
+// Inicialización de la lista de workers
+t_list* listaWorkers = NULL;
 
 pthread_mutex_t mutexListaQueriesReady;
 pthread_mutex_t mutexListaQueriesExec;
 pthread_mutex_t mutexListaQueriesExit;
 pthread_mutex_t mutexIdentificadorQueryGlobal;
 pthread_mutex_t mutexNivelMultiprogramacion;
+// Mutex para workers
+pthread_mutex_t mutexListaWorkers;
 
 
 void inicializarListasYSemaforos() {
     listaQueriesReady = list_create();
     listaQueriesExec = list_create();
     listaQueriesExit = list_create();
+    // Crear lista de workers
+    listaWorkers = list_create();
 
     pthread_mutex_init(&mutexListaQueriesReady, NULL);
     pthread_mutex_init(&mutexListaQueriesExec, NULL);
     pthread_mutex_init(&mutexListaQueriesExit, NULL);
     pthread_mutex_init(&mutexIdentificadorQueryGlobal, NULL);
     pthread_mutex_init(&mutexNivelMultiprogramacion, NULL);
+    // Init mutex workers
+    pthread_mutex_init(&mutexListaWorkers, NULL);
 
     log_debug(logger_master, "Listas y semaforos de queries inicializados");
 }
