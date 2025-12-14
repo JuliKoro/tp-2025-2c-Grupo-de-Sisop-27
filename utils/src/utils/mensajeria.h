@@ -398,6 +398,50 @@ t_buffer* serializar_delete(t_delete* delete);
  * @return t_delete* Estructura t_delete deserializada
  */
 t_delete* deserializar_delete(t_buffer* buffer);
+
+// SOLICITUDES DE OPERACIONES A STORAGE
+/**
+ * @brief Serializa una solicitud de operación de memoria interna
+ * @param solicitud Puntero a t_sol_read a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_solicitud_operacion(t_sol_read* solicitud);
+
+/**
+ * @brief Deserializa una solicitud de operación de memoria interna
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_sol_read* Estructura t_sol_read deserializada
+ */
+t_sol_read* deserializar_solicitud_operacion(t_buffer* buffer);
+
+/**
+ * @brief Serializa una solicitud de lectura de memoria interna
+ * @param solicitud Puntero a t_sol_read a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_solicitud_read(t_sol_read* solicitud);
+
+/**
+ * @brief Deserializa una solicitud de lectura de memoria interna
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_sol_read* Estructura t_sol_read deserializada
+ */
+t_sol_read* deserializar_solicitud_read(t_buffer* buffer);
+
+/**
+ * @brief Serializa un bloque leído de memoria interna
+ * @param bloque Puntero a t_bloque_leido a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_bloque_leido(t_bloque_leido* bloque);
+
+/**
+ * @brief Deserializa un bloque leído de memoria interna
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_bloque_leido* Estructura t_bloque_leido deserializada
+ */
+t_bloque_leido* deserializar_bloque_leido(t_buffer* buffer);
+
 #endif
  
 

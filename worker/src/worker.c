@@ -58,8 +58,9 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
     
+
     // Mostrar estado inicial para verificar
-    mostrar_estado_memoria(memoria_worker);
+    mostrar_estado_memoria();
 
     // SEMAFOROS
     // Inicializar semáforos
@@ -249,8 +250,9 @@ void finalizar_worker(){
     close(conexion_storage);
     close(conexion_master);
 
+
     // Limpieza de memoria al salir
-    destruir_memoria(memoria_worker);
+    destruir_memoria();
 
     // Cierre de logger
     if (logger_worker != NULL) {

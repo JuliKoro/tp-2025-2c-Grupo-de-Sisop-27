@@ -617,3 +617,36 @@ t_delete* deserializar_delete(t_buffer* buffer) {
     delete->tag_name = buffer_read_string(buffer);
     return delete;
 }
+
+t_buffer* serializar_solicitud_read(t_sol_read* solicitud) {
+    t_buffer* buffer = crear_buffer(0);
+    buffer_add_string(buffer, strlen(solicitud->file_name) + 1, solicitud->file_name);
+    buffer_add_string(buffer, strlen(solicitud->tag_name) + 1, solicitud->tag_name);
+    buffer_add_uint32(buffer, solicitud->numero_bloque);
+    buffer_add_uint32(buffer, solicitud->tamanio);
+    return buffer;
+}
+
+t_sol_read* deserializar_solicitud_read(t_buffer* buffer) {
+    t_sol_read* solicitud = malloc(sizeof(t_sol_read));
+    solicitud->file_name = buffer_read_string(buffer);
+    solicitud->tag_name = buffer_read_string(buffer);
+    solicitud->numero_bloque = buffer_read_uint32(buffer);
+    solicitud->tamanio = buffer_read_uint32(buffer);
+    return solicitud;
+}
+
+t_buffer* serializar_bloque_leido(t_bloque_leido* bloque) {
+    t_buffer* buffer = crear_buffer(0);
+    buffer_add_uint32(buffer, bloque->tamanio);
+    buffer_add(buffer, bloque->contenido, bloque->tamanio);
+    return buffer;
+}
+
+t_bloque_leido* deserializar_bloque_leido(t_buffer* buffer) {
+    t_bloque_leido* bloque = malloc(sizeof(t_bloque_leido));
+    bloque->tamanio = buffer_read_uint32(buffer);
+    bloque->contenido = malloc(bloque->tamanio);
+    buffer_read(buffer, bloque->contenido, bloque->tamanio);
+    return bloque;
+}

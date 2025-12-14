@@ -120,7 +120,9 @@ typedef enum {
     ERROR_ESPACIO_INSUFICIENTE = -4,
     ERROR_ESCRITURA_NO_PERMITIDA = -5, // Archivo en estado COMMITED
     ERROR_FUERA_DE_LIMITE = -6,
-    ERROR_CONEXION = -7
+    ERROR_CONEXION = -7,
+    ERROR_TAMANIO_INVALIDO = -8,
+    ERROR_MEMORIA_INTERNA = -9
 } t_resultado_ejecucion;
 
 /***********************************************************************************************************************/
@@ -229,5 +231,39 @@ typedef struct {
     char* file_name;
     char* tag_name;
 } t_delete;
+
+// SOLICITUDES MEMORIA INTERNA A STORAGE
+
+/**
+ * @brief Estructura para la solicitud de lectura de memoria interna
+ */
+typedef struct {
+    char* file_name;
+    char* tag_name;
+    uint32_t numero_bloque;
+    uint32_t tamanio;
+} t_sol_read;
+
+// Estructura para la respuesta de lectura de memoria interna
+/**
+ * @brief Estructura para la respuesta de lectura de memoria interna
+ */
+typedef struct {
+    void* contenido;
+    uint32_t tamanio;
+} t_bloque_leido;
+
+/**
+ * @brief Estructura para la solicitud de lectura de memoria interna
+ */
+typedef struct {
+    char* file_name;
+    char* tag_name;
+    uint32_t numero_bloque;
+    void* contenido;
+    uint32_t tamanio;
+} t_sol_write;
+
+
 
 #endif

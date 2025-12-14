@@ -322,21 +322,17 @@ t_resultado_ejecucion execute_write(char* file_name, char* tag_name, uint32_t di
         return EXEC_ERROR;
     }
     
-    // TODO: Escribir en memoria interna
-    // 1. Verificar si las páginas necesarias están en memoria
-    // 2. Si no están, cargarlas desde Storage (page fault)
-    // 3. Escribir el contenido en memoria
-    // 4. Marcar páginas como modificadas
-    
     log_debug(logger_worker, "Ejecutando WRITE %s:%s %d %s", 
               file_name, tag_name, direccion_base, contenido);
     
-    // Log obligatorio de escritura en memoria
-    log_info(logger_worker, "Query %d: Acción: ESCRIBIR - Dirección Física: %d - Valor: %s",
-             id_query, direccion_base, contenido);
+    // Calcular tamaño del contenido
+    uint32_t tamanio = strlen(contenido);
     
-    if (worker_configs->retardo_memoria > 0) {
-        usleep(worker_configs->retardo_memoria * 1000);
+
+    // Escribir en memoria interna
+    if (!escribir_memoria(file_name, tag_name, direccion_base, contenido, tamanio)) {
+        log_error(logger_worker, "Error al escribir en memoria interna");
+        return EXEC_ERROR;
     }
     
     return EXEC_OK;
@@ -348,28 +344,30 @@ t_resultado_ejecucion execute_read(char* file_name, char* tag_name, uint32_t dir
         return EXEC_ERROR;
     }
     
-    // TODO: Leer de memoria interna
-    // 1. Verificar si las páginas necesarias están en memoria
-    // 2. Si no están, cargarlas desde Storage (page fault)
-    // 3. Leer el contenido de memoria
-    // 4. Enviar el contenido al Master para que lo reenvíe al Query Control
-    
     log_debug(logger_worker, "Ejecutando READ %s:%s %d %d", 
               file_name, tag_name, direccion_base, tamanio);
     
-    // Simular lectura
-    char contenido_leido[256] = "CONTENIDO_EJEMPLO";
-    
-    // Log obligatorio de lectura en memoria
-    log_info(logger_worker, "Query %d: Acción: LEER - Dirección Física: %d - Valor: %s",
-             id_query, direccion_base, contenido_leido);
-    
-    // TODO: Enviar contenido leído al Master
-    
-    if (worker_configs->retardo_memoria > 0) {
-        usleep(worker_configs->retardo_memoria * 1000);
+    // Reservar buffer para el contenido
+    char* buffer = malloc(tamanio + 1);
+    if (!buffer) {
+        log_error(logger_worker, "Error al asignar memoria para buffer de lectura");
+        return EXEC_ERROR;
     }
     
+
+    // Leer de memoria interna
+    if (!leer_memoria(file_name, tag_name, direccion_base, tamanio, buffer)) {
+        log_error(logger_worker, "Error al leer de memoria interna");
+        free(buffer);
+        return EXEC_ERROR;
+    }
+    
+    buffer[tamanio] = '\0'; // Null-terminator para strings
+    
+    // TODO: Enviar contenido leído al Master para que lo reenvíe al Query Control
+    log_debug(logger_worker, "Contenido leído: %s", buffer);
+    
+    free(buffer);
     return EXEC_OK;
 }
 
@@ -427,17 +425,16 @@ t_resultado_ejecucion execute_flush(char* file_name, char* tag_name) {
         return EXEC_ERROR;
     }
     
-    // TODO: Persistir todas las páginas modificadas del File:Tag en Storage
-    // 1. Buscar todas las páginas del File:Tag en memoria
-    // 2. Para cada página modificada, escribirla en Storage
-    // 3. Marcar las páginas como no modificadas
-    
     log_debug(logger_worker, "Ejecutando FLUSH %s:%s", file_name, tag_name);
     
-    if (worker_configs->retardo_memoria > 0) {
-        usleep(worker_configs->retardo_memoria * 1000);
+
+    // Flush del File:Tag
+    if (!flush_file_tag(file_name, tag_name)) {
+        log_error(logger_worker, "Error al hacer flush de %s:%s", file_name, tag_name);
+        return EXEC_ERROR;
     }
     
+    log_debug(logger_worker, "FLUSH completado para %s:%s", file_name, tag_name);
     return EXEC_OK;
 }
 
