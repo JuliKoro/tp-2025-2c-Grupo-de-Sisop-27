@@ -138,8 +138,33 @@ void* atender_worker(void* thread_args) {
 
         // ACÁ PROCESARÍAMOS LOS MENSAJES FUTUROS DEL WORKER
         // Ej: case OP_FIN_QUERY: ... marcar libre, etc.
+        switch(paquete->codigo_operacion) {
+            
+            // CASO CLAVE: El worker terminó una tarea
+            case OP_RESULTADO_QUERY: // Asegúrate de tener este enum en estructuras.h
+                log_info(logger_master, "Worker %d finalizó una tarea con éxito.", nuevoWorker->id_worker);
+                
+                // Aquí podrías deserializar el resultado si el worker manda datos
+                // t_resultado* res = deserializar_resultado(paquete->datos);
+                
+                // CRÍTICO: Marcar al Worker como LIBRE nuevamente
+                pthread_mutex_lock(&mutexListaWorkers);
+                nuevoWorker->libre = true;
+                pthread_mutex_unlock(&mutexListaWorkers);
+                
+                log_debug(logger_master, "Worker %d marcado como LIBRE. Listo para próxima tarea.", nuevoWorker->id_worker);
+                break;
+
+            // Aquí puedes agregar más casos (ej: OP_ERROR, logs intermedios, etc.)
+            
+            default:
+                log_warning(logger_master, "Mensaje desconocido del Worker %d (OpCode: %d)", 
+                            nuevoWorker->id_worker, paquete->codigo_operacion);
+                break;
+        }
         log_info(logger_master, "Mensaje recibido del Worker %d (código operación: %d)", 
             nuevoWorker->id_worker, paquete->codigo_operacion);
+        
 
         destruir_paquete(paquete);
     }
@@ -150,6 +175,11 @@ void* atender_worker(void* thread_args) {
 
     // Usamos list_remove_element que es estándar y busca por puntero.
     list_remove_element(listaWorkers, nuevoWorker);
+
+//FUNCION AUX PARA ENCONTRAR Y REMOVER WORKER POR ID
+    bool _is_this_worker(void* element) {
+    return(((t_worker_interno*)element)->id_worker == nuevoWorker->id_worker);
+    }
 
     pthread_mutex_unlock(&mutexListaWorkers);
 

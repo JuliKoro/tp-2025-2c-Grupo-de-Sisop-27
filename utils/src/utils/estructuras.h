@@ -29,7 +29,8 @@ typedef enum {
     OP_COMMIT,
     OP_FLUSH,
     OP_DELETE,
-    OP_END
+    OP_END,
+    OP_RESULTADO_QUERY
 } e_codigo_operacion;
 
 /**
