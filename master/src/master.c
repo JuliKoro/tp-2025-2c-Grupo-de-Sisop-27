@@ -10,8 +10,17 @@ int nivelMultiprogramacion = 0;
 
 int main(int argc, char* argv[]) {
     //Arrancamos configs y logger
-    master_config = get_configs_master("master.config");    
+    // INICIO MASTER
+    if(argc != 2){
+        fprintf(stderr, "Uso: %s <nombre_archivo_configuracion>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    char* nombre_config = argv[1];
+
+    master_config = get_configs_master(nombre_config);    
     logger_master = iniciarLoggerMaster(master_config->log_level);
+    
     //Pasamos el puerto de int a char para levantar el server
     char puerto_escucha[10];
     sprintf(puerto_escucha, "%d", master_config->puerto_escucha);
