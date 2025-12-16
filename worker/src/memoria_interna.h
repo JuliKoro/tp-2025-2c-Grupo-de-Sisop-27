@@ -42,30 +42,32 @@ void mostrar_estado_memoria(void);
 
 /**
  * @brief Busca una página en la tabla. Si la encuentra (hit), actualiza bits de uso/acceso.
+ * @note Usa la variable global memoria_worker->tabla directamente.
  */
-entrada_tabla_paginas* buscar_pagina(tabla_paginas* tabla, const char* file, const char* tag, int num_pagina);
+entrada_tabla_paginas* buscar_pagina(const char* file, const char* tag, int num_pagina);
 
 /**
  * @brief Agrega una nueva entrada a la tabla de páginas.
+ * @note Usa la variable global memoria_worker->tabla directamente.
  */
-void agregar_entrada_tabla(tabla_paginas* tabla, const char* file, const char* tag, int num_pagina, int marco);
+void agregar_entrada_tabla(const char* file, const char* tag, int num_pagina, int marco);
 
 
 // --- ALGORITMOS DE SUSTITUCIÓN ---
 
 /**
  * @brief Encuentra la víctima según el algoritmo LRU.
- * @param tabla Tabla de páginas
+ * @note Usa la variable global memoria_worker->tabla directamente.
  * @return Índice de la entrada víctima
  */
-int encontrar_victima_lru(tabla_paginas* tabla);
+int encontrar_victima_lru(void);
 
 /**
  * @brief Encuentra la víctima según el algoritmo CLOCK-M.
- * @param tabla Tabla de páginas
+ * @note Usa la variable global memoria_worker->tabla directamente.
  * @return Índice de la entrada víctima
  */
-int encontrar_victima_clock_m(tabla_paginas* tabla);
+int encontrar_victima_clock_m(void);
 
 /**
  * @brief Ejecuta el algoritmo de reemplazo configurado y desaloja una página.

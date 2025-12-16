@@ -133,9 +133,9 @@ void mostrar_estado_memoria(void) {
 
 //BUSCAR PAGINA
 
-entrada_tabla_paginas* buscar_pagina(tabla_paginas* tabla, const char* file, const char* tag, int num_pagina) {
-    for (int i = 0; i < tabla->cantidad_entradas; i++) {
-        entrada_tabla_paginas* entrada = tabla->entradas[i];
+entrada_tabla_paginas* buscar_pagina(const char* file, const char* tag, int num_pagina) {
+    for (int i = 0; i < memoria_worker->tabla->cantidad_entradas; i++) {
+        entrada_tabla_paginas* entrada = memoria_worker->tabla->entradas[i];
         if (strcmp(entrada->file_name, file) == 0 &&
             strcmp(entrada->tag_name, tag) == 0 &&
             entrada->numero_pagina == num_pagina) {
@@ -155,8 +155,9 @@ entrada_tabla_paginas* buscar_pagina(tabla_paginas* tabla, const char* file, con
 
 //AGREGAR ENTRADA A TABLA DE PAGINAS
 
-void agregar_entrada_tabla(tabla_paginas* tabla, const char* file, const char* tag, int num_pagina, int marco) {
-    
+void agregar_entrada_tabla(const char* file, const char* tag, int num_pagina, int marco) {
+    tabla_paginas* tabla = memoria_worker->tabla;
+
     // Agrandamos el array de punteros para hacer espacio para el nuevo
     tabla->entradas = realloc(tabla->entradas, (tabla->cantidad_entradas + 1) * sizeof(entrada_tabla_paginas*));
     if (!tabla->entradas) {
@@ -164,7 +165,7 @@ void agregar_entrada_tabla(tabla_paginas* tabla, const char* file, const char* t
         // Aca se podría manejar el error de forma mas robusta, tal vez terminando la query
         return;
     }
-    
+
     // Crear nueva entrada
     entrada_tabla_paginas* nueva = malloc(sizeof(entrada_tabla_paginas));
     nueva->file_name = strdup(file);
@@ -175,10 +176,10 @@ void agregar_entrada_tabla(tabla_paginas* tabla, const char* file, const char* t
     nueva->modificado = 0;
     nueva->bit_uso = 1; // Se considera usada al cargarla
     nueva->ultimo_acceso = time(NULL); // Se setea el tiempo
-    
+
     tabla->entradas[tabla->cantidad_entradas] = nueva;
     tabla->cantidad_entradas++;
-    
+
     // Log obligatorio
     log_info(logger_worker, "## Se asigna el Marco: %d a la Página: %d perteneciente al - File: %s - Tag: %s", 
              marco, num_pagina, file, tag);
@@ -186,13 +187,14 @@ void agregar_entrada_tabla(tabla_paginas* tabla, const char* file, const char* t
 
 //------------ALGORITMOS DE REEMPLAZO------------
 
-int encontrar_victima_lru(tabla_paginas* tabla) {
+int encontrar_victima_lru(void) {
+    tabla_paginas* tabla = memoria_worker->tabla;
     int indice_victima = -1;
     time_t min_tiempo = time(NULL) + 1; // Un tiempo futuro
 
     for (int i = 0; i < tabla->cantidad_entradas; i++) {
         entrada_tabla_paginas* entrada = tabla->entradas[i];
-        
+
         // Solo consideramos páginas que estén en memoria
         if (entrada->presente) {
             if (entrada->ultimo_acceso < min_tiempo) {
@@ -204,7 +206,8 @@ int encontrar_victima_lru(tabla_paginas* tabla) {
     return indice_victima;
 }
 
-int encontrar_victima_clock_m(tabla_paginas* tabla) {
+int encontrar_victima_clock_m(void) {
+    tabla_paginas* tabla = memoria_worker->tabla;
     int N = tabla->cantidad_entradas;
     if (N == 0) return -1; // No hay páginas
 
@@ -219,7 +222,7 @@ int encontrar_victima_clock_m(tabla_paginas* tabla) {
 
         // Solo consideramos páginas que estén en memoria
         if (!entrada->presente) {
-            continue; 
+            continue;
         }
 
         if (entrada->bit_uso == 0 && entrada->modificado == 0) {
@@ -251,12 +254,12 @@ int encontrar_victima_clock_m(tabla_paginas* tabla) {
             // Encontramos un (0,0) que antes era (1,0)
             return indice_actual;
         }
-        
+
         if (entrada->bit_uso == 0 && entrada->modificado == 1) {
             // Víctima encontrada en (0,1)
             return indice_actual;
         }
-        
+
         // Si era (1,1), en la pasada anterior se volvió (0,1)
         // así que la condición anterior lo va a atrapar
         // Si era (1,0), se volvió (0,0) y la primera condición lo atrapa
@@ -267,19 +270,19 @@ int encontrar_victima_clock_m(tabla_paginas* tabla) {
 }
 
 int ejecutar_algoritmo_reemplazo(const char* file_nuevo, const char* tag_nuevo, int pag_nueva) {
-    
+
     int indice_victima = -1;
-    
+
     // Acá usamos el config para decidir qué algoritmo usar
     // Usamos worker_configs que trajimos con extern
     if (strcmp(worker_configs->algoritmo_reemplazo, "LRU") == 0) {
-        indice_victima = encontrar_victima_lru(memoria_worker->tabla);
+        indice_victima = encontrar_victima_lru();
     } else if (strcmp(worker_configs->algoritmo_reemplazo, "CLOCK-M") == 0) {
-        indice_victima = encontrar_victima_clock_m(memoria_worker->tabla);
+        indice_victima = encontrar_victima_clock_m();
     } else {
         // Fallback por si el config está mal (o FIFO si lo implementaran)
         log_error(logger_worker, "Algoritmo de reemplazo no reconocido. Usando LRU.");
-        indice_victima = encontrar_victima_lru(memoria_worker->tabla);
+        indice_victima = encontrar_victima_lru();
     }
 
     if (indice_victima == -1) {
@@ -298,7 +301,7 @@ int ejecutar_algoritmo_reemplazo(const char* file_nuevo, const char* tag_nuevo, 
     if (victima->modificado) {
         log_info(logger_worker, "Página víctima (%s:%s Pag %d) modificada. Iniciando FLUSH.",
                  victima->file_name, victima->tag_name, victima->numero_pagina);
-        
+
         // TODO: IMPLEMENTAR LÓGICA DE FLUSH 
         // 1. Calcular dirección física: (memoria_worker->memoria + (victima->marco * memoria_worker->tam_pagina))
         // 2. Enviar ese bloque de memoria al Storage (junto con file, tag y num_pagina/bloque)
@@ -313,7 +316,7 @@ int ejecutar_algoritmo_reemplazo(const char* file_nuevo, const char* tag_nuevo, 
     victima->bit_uso = 0;
     victima->marco = -1; // No tiene marco asignado
 
-    // Log de liberación 
+    // Log de liberación
     log_info(logger_worker, "## Se libera el Marco: %d perteneciente al - File: %s - Tag: %s", 
              marco_liberado, victima->file_name, victima->tag_name);
 
@@ -349,7 +352,7 @@ bool traducir_direccion(const char* file,
     uint32_t offset = dir_logica % memoria_worker->tam_pagina;
     
     // Buscar la página en la tabla
-    entrada_tabla_paginas* entrada = buscar_pagina(memoria_worker->tabla, file, tag, num_pagina);
+    entrada_tabla_paginas* entrada = buscar_pagina(file, tag, num_pagina);
     
     // Si no existe la entrada, es la primera vez que se accede
     if (entrada == NULL) {
@@ -417,7 +420,7 @@ int manejar_page_fault(const char* file,
     memset(dir_marco, 0, memoria_worker->tam_pagina);
     
     // 4. Verificar si ya existe una entrada para esta página (desalojada previamente)
-    entrada_tabla_paginas* entrada_existente = buscar_pagina(memoria_worker->tabla, file, tag, num_pagina);
+    entrada_tabla_paginas* entrada_existente = buscar_pagina(file, tag, num_pagina);
     
     if (entrada_existente != NULL) {
         // La entrada ya existe (fue desalojada antes), solo actualizarla
@@ -431,7 +434,7 @@ int manejar_page_fault(const char* file,
                  marco, num_pagina, file, tag);
     } else {
         // Es una página nueva, agregar entrada a la tabla
-        agregar_entrada_tabla(memoria_worker->tabla, file, tag, num_pagina, marco);
+        agregar_entrada_tabla(file, tag, num_pagina, marco);
     }
     
     // 5. Marcar marco como ocupado
@@ -621,7 +624,7 @@ bool escribir_memoria(const char* file,
         memcpy(destino, (char*)contenido + bytes_escritos, bytes_a_escribir);
         
         // Marcar página como modificada
-        entrada_tabla_paginas* entrada = buscar_pagina(memoria_worker->tabla, file, tag, num_pagina);
+        entrada_tabla_paginas* entrada = buscar_pagina(file, tag, num_pagina);
         if (entrada && entrada->presente) {
             entrada->modificado = 1;
         }
