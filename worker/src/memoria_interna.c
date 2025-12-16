@@ -6,37 +6,38 @@ memoria_interna* memoria_worker = NULL;
 memoria_interna* inicializar_memoria() {
     memoria_interna* mem = malloc(sizeof(memoria_interna));
     if (!mem) {
-        fprintf(stderr, "Error: No se pudo asignar memoria para memoria_interna\n");
+        log_error(logger_worker, "Error: No se pudo asignar memoria para memoria_interna");
         return NULL;
     }
     
-    // Hardcodeo el tamaño de página por ahora
     mem->tam_memoria = worker_configs->tam_memoria;
     mem->tam_pagina = worker_configs->tam_pagina; // tamaño de página del handshake
     
     // Validación división por cero
     if (mem->tam_pagina <= 0) {
-        fprintf(stderr, "Error: Tamaño de página inválido (%d) ", mem->tam_pagina);
+        log_error(logger_worker, "Error: Tamaño de página inválido (%d)", mem->tam_pagina);
         free(mem);
         return NULL;
     }
+
     mem->cantidad_marcos = worker_configs->tam_memoria / worker_configs->tam_pagina;
     
     // Reservar la memoria principal
     mem->memoria = malloc(mem->tam_memoria);
     if (!mem->memoria) {
-        fprintf(stderr, "Error: No se pudo asignar memoria principal\n");
+        log_error(logger_worker, "Error: No se pudo asignar memoria principal");
         free(mem);
         return NULL;
     }
 
     // Inicializar array de marcos libres (1 = libre, 0 = ocupado)
     mem->marcos_libres = malloc(mem->cantidad_marcos * sizeof(int));
-        if (!mem->marcos_libres) {
-        fprintf(stderr, "Error: No se pudo asignar memoria para marcos_libres\n");
+    
+    if (!mem->marcos_libres) {
+        log_error(logger_worker, "Error: No se pudo asignar memoria para marcos_libres");
         free(mem->memoria);
         free(mem);
-    return NULL;
+        return NULL;
     }   
 
     // Inicializar todos los marcos como libres
@@ -47,7 +48,7 @@ memoria_interna* inicializar_memoria() {
     // Inicializar tabla de páginas vacía
     mem->tabla = malloc(sizeof(tabla_paginas));
     if (!mem->tabla) {
-        fprintf(stderr, "Error: No se pudo asignar memoria para tabla_paginas\n");
+        log_error(logger_worker, "Error: No se pudo asignar memoria para tabla_paginas");
         free(mem->marcos_libres);
         free(mem->memoria);
         free(mem);
@@ -65,12 +66,13 @@ memoria_interna* inicializar_memoria() {
         mem->tabla->algoritmo_reemplazo = ALGORITMO_CLOCK_M;
     } 
 
-
     fprintf(stderr, "Memoria interna inicializada:\n");
     fprintf(stderr, " - Tamaño memoria: %d bytes\n", mem->tam_memoria);
     fprintf(stderr, " - Tamaño página: %d bytes\n", mem->tam_pagina);
     fprintf(stderr, " - Cantidad de marcos: %d\n", mem->cantidad_marcos);
     fprintf(stderr, " - Tabla de páginas creada (vacía)\n");
+
+    log_debug(logger_worker, "Memoria interna inicializada correctamente");
 
     return mem;
 }
@@ -97,7 +99,7 @@ void destruir_memoria(void) {
     free(memoria_worker);
     memoria_worker = NULL;
     
-    fprintf(stderr, "Memoria interna liberada correctamente\n");
+    log_debug(logger_worker, "Memoria interna liberada correctamente");
 }
 
 void mostrar_estado_memoria(void) {

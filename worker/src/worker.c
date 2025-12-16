@@ -51,13 +51,12 @@ int main(int argc, char* argv[]) {
     // INICIO MEMORIA INTERNA
     // -- CREACIÓN DE TABLAS DE PÁGINAS --
     // Inicializar memoria con tabla de páginas
-    memoria_worker = inicializar_memoria(); 
+    memoria_worker = inicializar_memoria();
 
     if (!memoria_worker) {
-        fprintf(stderr, "Error crítico: No se pudo inicializar la memoria\n");
+        log_error(logger_worker, "Error crítico: No se pudo inicializar la memoria");
         return EXIT_FAILURE;
     }
-    
 
     // Mostrar estado inicial para verificar
     mostrar_estado_memoria();
@@ -249,12 +248,13 @@ void finalizar_worker(){
     // CERRAR SOCKETS
     close(conexion_storage);
     close(conexion_master);
-
+    log_warning(logger_worker, "Conexiones cerradas.");
 
     // Limpieza de memoria al salir
     destruir_memoria();
 
     // Cierre de logger
+    log_warning(logger_worker, "Logger cerrado.");
     if (logger_worker != NULL) {
         log_destroy(logger_worker);
     }
