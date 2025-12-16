@@ -24,7 +24,7 @@ typedef enum {
     OP_CREATE,
     OP_TRUNCATE,
     OP_WRITE,
-    OP_READ,
+    OP_READ, // Tanto como para solicitud como para respuesta
     OP_TAG,
     OP_COMMIT,
     OP_FLUSH,
@@ -248,6 +248,8 @@ typedef struct {
 // Estructura para la respuesta de lectura de memoria interna
 /**
  * @brief Estructura para la respuesta de lectura de memoria interna
+ * @param contenido el contenido leído - void*
+ * @param tamanio el tamaño del contenido leído - uint32_t
  */
 typedef struct {
     void* contenido;
@@ -264,7 +266,5 @@ typedef struct {
     void* contenido;
     uint32_t tamanio;
 } t_sol_write;
-
-
 
 #endif

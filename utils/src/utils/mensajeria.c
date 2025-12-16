@@ -650,3 +650,15 @@ t_bloque_leido* deserializar_bloque_leido(t_buffer* buffer) {
     buffer_read(buffer, bloque->contenido, bloque->tamanio);
     return bloque;
 }
+
+t_buffer* serializar_cod_error(t_resultado_ejecucion* resultado) {
+    t_buffer* buffer = crear_buffer(sizeof(uint32_t));
+    buffer_add_uint32(buffer, (uint32_t)(*resultado));
+    return buffer;
+}
+
+t_resultado_ejecucion* deserializar_cod_error(t_buffer* buffer) {
+    t_resultado_ejecucion* resultado = malloc(sizeof(t_resultado_ejecucion));
+    *resultado = (t_resultado_ejecucion)buffer_read_uint32(buffer);
+    return resultado;
+}

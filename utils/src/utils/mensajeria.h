@@ -11,8 +11,8 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <string.h>
-#include "estructuras.h"
 
+#include "estructuras.h"
 
 /***********************************************************************************************************************/
 /***                                                    SOCKETS                                                      ***/
@@ -283,6 +283,19 @@ t_buffer* serializar_resultado_query(t_resultado_query* resultado);
  */
 t_resultado_query* deserializar_resultado_query(t_buffer* buffer);
 
+/**
+ * @brief Serializa un código de error (t_resultado_ejecucion)
+ * @param resultado Puntero al código de error a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_cod_error(t_resultado_ejecucion* resultado);
+
+/**
+ * @brief Deserializa un código de error (t_resultado_ejecucion)
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_resultado_ejecucion* Estructura t_resultado_ejecucion deserializada
+ */
+t_resultado_ejecucion* deserializar_cod_error(t_buffer* buffer);
 
 // ============================================================================
 // SERIALIZACION DE INSTRUCCIONES

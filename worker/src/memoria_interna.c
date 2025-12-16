@@ -180,9 +180,9 @@ void agregar_entrada_tabla(const char* file, const char* tag, int num_pagina, in
     tabla->entradas[tabla->cantidad_entradas] = nueva;
     tabla->cantidad_entradas++;
 
-    // Log obligatorio
-    log_info(logger_worker, "## Se asigna el Marco: %d a la Página: %d perteneciente al - File: %s - Tag: %s", 
-             marco, num_pagina, file, tag);
+    // Log obligatorio - Asignar Marco
+    log_info(logger_worker, "## Query %d: Se asigna el Marco: %d a la Página: %d perteneciente al - File: %s - Tag: %s", 
+            id_query, marco, num_pagina, file, tag);
 }
 
 //------------ALGORITMOS DE REEMPLAZO------------
@@ -338,18 +338,23 @@ int buscar_marco_libre(void) {
     return -1; // No hay marcos libres
 }
 
+uint32_t numero_pagina(uint32_t dir_logica) {
+    return dir_logica / memoria_worker->tam_pagina;
+}
 
-bool traducir_direccion(const char* file, 
-                        const char* tag,
-                        uint32_t dir_logica, 
-                        uint32_t* dir_fisica) {
+uint32_t offset_pagina(uint32_t dir_logica) {
+    return dir_logica % memoria_worker->tam_pagina;
+}
+
+
+bool traducir_direccion(const char* file, const char* tag, uint32_t dir_logica, uint32_t* dir_fisica) {
     if (!memoria_worker || !file || !tag || !dir_fisica) {
         return false;
     }
     
     // Calcular número de página y desplazamiento
-    uint32_t num_pagina = dir_logica / memoria_worker->tam_pagina;
-    uint32_t offset = dir_logica % memoria_worker->tam_pagina;
+    uint32_t num_pagina = numero_pagina(dir_logica);
+    uint32_t offset = offset_pagina(dir_logica);
     
     // Buscar la página en la tabla
     entrada_tabla_paginas* entrada = buscar_pagina(file, tag, num_pagina);
@@ -371,76 +376,80 @@ bool traducir_direccion(const char* file,
     return true;
 }
 
-
-
-int manejar_page_fault(const char* file,
-                       const char* tag,
-                       uint32_t num_pagina) {
+t_resultado_ejecucion manejar_page_fault(const char* file, const char* tag, uint32_t num_pagina, int* marco) {
     if (!memoria_worker || !file || !tag) {
-        return -1;
+        return ERROR_MEMORIA_INTERNA;
     }
     
-    // Log obligatorio de PAGE FAULT
-    log_info(logger_worker, "## Query %d: PAGE FAULT - File: %s - Tag: %s - Página: %d", 
+    // Log de PAGE FAULT
+    log_warning(logger_worker, "## Query %d: PAGE FAULT - File: %s - Tag: %s - Página: %d", 
              id_query, file, tag, num_pagina);
+
+    // Log obligatorio de Bloque faltante en Memoria
+    log_info(logger_worker, "## Query %d: - Memoria Miss - File: %s - Tag: %s - Pagina: %d", id_query, file, tag, num_pagina);
+    
+    // Variable local para manejar el número de marco
+    int marco_asignado = buscar_marco_libre();
     
     // Buscar marco libre
-    int marco = buscar_marco_libre();
-    
     // Si no hay marco libre, ejecutar algoritmo de reemplazo
-    if (marco == -1) {
-        log_debug(logger_worker, "No hay marcos libres. Ejecutando algoritmo de reemplazo.");
-        marco = ejecutar_algoritmo_reemplazo(file, tag, num_pagina);
+    if (marco_asignado == -1) {
+        log_warning(logger_worker, "No hay marcos libres. Ejecutando algoritmo de reemplazo.");
+        marco_asignado = ejecutar_algoritmo_reemplazo(file, tag, num_pagina);
         
-        if (marco < 0) {
+        if (marco_asignado < 0) {
             log_error(logger_worker, "Error al ejecutar algoritmo de reemplazo");
-            return -1;
+            return ERROR_MEMORIA_INTERNA;
         }
     }
     
     // Solicitar bloque a Storage
     if (!solicitar_bloque_storage(file, tag, num_pagina, memoria_worker->tam_pagina)) {
         log_error(logger_worker, "Error al solicitar bloque %d de %s:%s a Storage", num_pagina, file, tag);
-        return -1;
+        return ERROR_CONEXION;
     }
-
-    log_debug(logger_worker, "Solicitando bloque %d de %s:%s a Storage", num_pagina, file, tag);
-    
-    // NOTA: Aquí el usuario debe implementar:
-    // - Crear estructura t_read con file, tag, numero_bloque=num_pagina, tamanio=tam_pagina
-    // - Enviar solicitud a Storage
-    // - Recibir contenido del bloque
 
     void* bloque = malloc(memoria_worker->tam_pagina);
 
-    t_resultado_ejecucion resultado = recibir_bloque_storage(&bloque);
+    t_resultado_ejecucion resultado = recibir_bloque_storage(bloque);
+
+    if (resultado != EXEC_OK) {
+        log_error(logger_worker, "Error al recibir bloque %d de %s:%s desde Storage", num_pagina, file, tag);
+        free(bloque);
+        return resultado; // Propagar el error
+    }
     
-    // Por ahora, inicializamos el marco con ceros
-    void* dir_marco = memoria_worker->memoria + (marco * memoria_worker->tam_pagina);
-    memset(dir_marco, 0, memoria_worker->tam_pagina);
+    // Copiamos el contenido recibido al marco de memoria correspondiente
+    void* dir_marco = memoria_worker->memoria + (marco_asignado * memoria_worker->tam_pagina);
+    memcpy(dir_marco, bloque, memoria_worker->tam_pagina);
+    free(bloque); // Liberamos el buffer temporal
     
-    // 4. Verificar si ya existe una entrada para esta página (desalojada previamente)
+    // Verificar si ya existe una entrada para esta página (desalojada previamente)
     entrada_tabla_paginas* entrada_existente = buscar_pagina(file, tag, num_pagina);
     
     if (entrada_existente != NULL) {
         // La entrada ya existe (fue desalojada antes), solo actualizarla
-        entrada_existente->marco = marco;
+        entrada_existente->marco = marco_asignado;
         entrada_existente->presente = 1;
         entrada_existente->modificado = 0;
         entrada_existente->bit_uso = 1;
         entrada_existente->ultimo_acceso = time(NULL);
-        
-        log_info(logger_worker, "## Se asigna el Marco: %d a la Página: %d perteneciente al - File: %s - Tag: %s", 
-                 marco, num_pagina, file, tag);
+
+        // Log obligatorio - Asignar Marco
+        log_info(logger_worker, "## Query %d: Se asigna el Marco: %d a la Página: %d perteneciente al - File: %s - Tag: %s", 
+                 id_query, marco_asignado, num_pagina, file, tag);
     } else {
         // Es una página nueva, agregar entrada a la tabla
-        agregar_entrada_tabla(file, tag, num_pagina, marco);
+        agregar_entrada_tabla(file, tag, num_pagina, marco_asignado);
     }
     
-    // 5. Marcar marco como ocupado
-    memoria_worker->marcos_libres[marco] = 0;
+    // Marcar marco como ocupado
+    memoria_worker->marcos_libres[marco_asignado] = 0;
     
-    return marco;
+    // Asignamos el valor al puntero de salida
+    if (marco != NULL) *marco = marco_asignado;
+    
+    return EXEC_OK;
 }
 
 bool solicitar_bloque_storage(const char* file, const char* tag, uint32_t num_pagina, uint32_t tamanio) {
@@ -465,6 +474,8 @@ bool solicitar_bloque_storage(const char* file, const char* tag, uint32_t num_pa
     free(solicitud->file_name);
     free(solicitud->tag_name);
     free(solicitud);
+
+    log_debug(logger_worker, "Solicitando bloque %d de %s:%s a Storage", num_pagina, file, tag);
     return true;
 }
 
@@ -475,12 +486,17 @@ t_resultado_ejecucion recibir_bloque_storage(void* bloque) {
         return ERROR_CONEXION;
     }
 
+    if (paquete_recibido->codigo_operacion == OP_ERROR) {
+        log_error(logger_worker, "Storage respondió con ERROR al solicitar bloque");
+        t_resultado_ejecucion* cod_error = deserializar_cod_error(paquete_recibido->datos);
+        destruir_paquete(paquete_recibido);
+        return *cod_error;
+    }
+
     if (paquete_recibido->codigo_operacion != OP_READ) {
         log_error(logger_worker, "Código de operación inesperado al recibir bloque de Storage");
         // Liberar paquete recibido
-        free(paquete_recibido->datos->stream);
-        free(paquete_recibido->datos);
-        free(paquete_recibido);
+        destruir_paquete(paquete_recibido);
         return ERROR_CONEXION;
     }
 
@@ -492,13 +508,11 @@ t_resultado_ejecucion recibir_bloque_storage(void* bloque) {
         // Liberar recursos
         free(bloque_leido->contenido);
         free(bloque_leido);
-        free(paquete_recibido->datos->stream);
-        free(paquete_recibido->datos);
-        free(paquete_recibido);
+        destruir_paquete(paquete_recibido);
         return ERROR_TAMANIO_INVALIDO;
     }
     
-    memset(bloque, bloque_leido->contenido, bloque_leido->tamanio); // Copiar contenido al bloque proporcionado
+    memcpy(bloque, bloque_leido->contenido, bloque_leido->tamanio); // Copiar contenido al bloque proporcionado
 
     free(bloque_leido->contenido);
     free(bloque_leido);
@@ -506,14 +520,11 @@ t_resultado_ejecucion recibir_bloque_storage(void* bloque) {
     return EXEC_OK;
 }
 
+// OPERACIONES DE MEMORIA INTERNA/STORAGE
 
-bool leer_memoria(const char* file,
-                  const char* tag,
-                  uint32_t dir_logica,
-                  uint32_t tamanio,
-                  void* buffer) {
+t_resultado_ejecucion leer_memoria(const char* file, const char* tag, uint32_t dir_logica, uint32_t tamanio, void* buffer) {
     if (!memoria_worker || !file || !tag || !buffer || tamanio == 0) {
-        return false;
+        return ERROR_MEMORIA_INTERNA;
     }
     
     log_debug(logger_worker, "Leyendo %d bytes desde dirección lógica %d de %s:%s", 
@@ -524,8 +535,8 @@ bool leer_memoria(const char* file,
     
     while (bytes_leidos < tamanio) {
         // Calcular página actual
-        uint32_t num_pagina = dir_actual / memoria_worker->tam_pagina;
-        uint32_t offset = dir_actual % memoria_worker->tam_pagina;
+        uint32_t num_pagina = numero_pagina(dir_actual);
+        uint32_t offset = offset_pagina(dir_actual);
         
         // Calcular cuántos bytes leer de esta página
         uint32_t bytes_en_pagina = memoria_worker->tam_pagina - offset;
@@ -537,16 +548,22 @@ bool leer_memoria(const char* file,
         if (!traducir_direccion(file, tag, dir_actual, &dir_fisica)) {
             // PAGE FAULT
             log_debug(logger_worker, "Page fault al leer página %d", num_pagina);
-            int marco = manejar_page_fault(file, tag, num_pagina);
+            int marco;
+            t_resultado_ejecucion resultado = manejar_page_fault(file, tag, num_pagina, &marco);
+            if (resultado != EXEC_OK) {
+                log_error(logger_worker, "Error al manejar page fault");
+                return resultado;
+            }
+
             if (marco < 0) {
                 log_error(logger_worker, "Error al manejar page fault");
-                return false;
+                return ERROR_MEMORIA_INTERNA;
             }
             
             // Reintentar traducción
             if (!traducir_direccion(file, tag, dir_actual, &dir_fisica)) {
                 log_error(logger_worker, "Error al traducir dirección después de page fault");
-                return false;
+                return ERROR_MEMORIA_INTERNA;
             }
         }
         
@@ -576,13 +593,9 @@ bool leer_memoria(const char* file,
 }
 
 
-bool escribir_memoria(const char* file,
-                      const char* tag,
-                      uint32_t dir_logica,
-                      const void* contenido,
-                      uint32_t tamanio) {
+t_resultado_ejecucion escribir_memoria(const char* file, const char* tag, uint32_t dir_logica, const void* contenido, uint32_t tamanio) {
     if (!memoria_worker || !file || !tag || !contenido || tamanio == 0) {
-        return false;
+        return ERROR_MEMORIA_INTERNA;
     }
     
     log_debug(logger_worker, "Escribiendo %d bytes en dirección lógica %d de %s:%s", 
@@ -593,8 +606,8 @@ bool escribir_memoria(const char* file,
     
     while (bytes_escritos < tamanio) {
         // Calcular página actual
-        uint32_t num_pagina = dir_actual / memoria_worker->tam_pagina;
-        uint32_t offset = dir_actual % memoria_worker->tam_pagina;
+        uint32_t num_pagina = numero_pagina(dir_actual);
+        uint32_t offset = offset_pagina(dir_actual);
         
         // Calcular cuántos bytes escribir en esta página
         uint32_t bytes_en_pagina = memoria_worker->tam_pagina - offset;
@@ -605,17 +618,18 @@ bool escribir_memoria(const char* file,
         uint32_t dir_fisica;
         if (!traducir_direccion(file, tag, dir_actual, &dir_fisica)) {
             // PAGE FAULT
-            log_debug(logger_worker, "Page fault al escribir en página %d", num_pagina);
-            int marco = manejar_page_fault(file, tag, num_pagina);
-            if (marco < 0) {
+            log_warning(logger_worker, "Page fault al escribir en página %d", num_pagina);
+            int marco;
+            t_resultado_ejecucion resultado = manejar_page_fault(file, tag, num_pagina, &marco);
+            if (resultado != EXEC_OK) {
                 log_error(logger_worker, "Error al manejar page fault");
-                return false;
+                return resultado;
             }
             
             // Reintentar traducción
             if (!traducir_direccion(file, tag, dir_actual, &dir_fisica)) {
                 log_error(logger_worker, "Error al traducir dirección después de page fault");
-                return false;
+                return ERROR_MEMORIA_INTERNA;
             }
         }
         
@@ -633,7 +647,8 @@ bool escribir_memoria(const char* file,
         if (bytes_escritos == 0) {
             char contenido_str[256];
             snprintf(contenido_str, sizeof(contenido_str), "%.*s", (int)bytes_a_escribir, (char*)contenido);
-            log_info(logger_worker, "Query %d: Acción: ESCRIBIR - Dirección Física: %d - Valor: %s",
+            // Log Obligatorio - Escritura Memoria
+            log_info(logger_worker, "## Query %d: Acción: ESCRIBIR - Dirección Física: %d - Valor: %s",
                      id_query, dir_fisica, contenido_str);
         }
         
@@ -647,7 +662,7 @@ bool escribir_memoria(const char* file,
     }
     
     log_debug(logger_worker, "Escritura completada: %d bytes", bytes_escritos);
-    return true;
+    return EXEC_OK;
 }
 
 

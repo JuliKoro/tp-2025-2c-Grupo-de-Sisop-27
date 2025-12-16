@@ -327,12 +327,12 @@ t_resultado_ejecucion execute_write(char* file_name, char* tag_name, uint32_t di
     
     // Calcular tamaño del contenido
     uint32_t tamanio = strlen(contenido);
-    
 
     // Escribir en memoria interna
-    if (!escribir_memoria(file_name, tag_name, direccion_base, contenido, tamanio)) {
+    t_resultado_ejecucion resultado = escribir_memoria(file_name, tag_name, direccion_base, contenido, tamanio);
+    if (resultado != EXEC_OK) {
         log_error(logger_worker, "Error al escribir en memoria interna");
-        return EXEC_ERROR;
+        return resultado;
     }
     
     return EXEC_OK;
@@ -354,12 +354,12 @@ t_resultado_ejecucion execute_read(char* file_name, char* tag_name, uint32_t dir
         return EXEC_ERROR;
     }
     
-
     // Leer de memoria interna
-    if (!leer_memoria(file_name, tag_name, direccion_base, tamanio, buffer)) {
+    t_resultado_ejecucion resultado = leer_memoria(file_name, tag_name, direccion_base, tamanio, buffer);
+    if (resultado != EXEC_OK) {
         log_error(logger_worker, "Error al leer de memoria interna");
         free(buffer);
-        return EXEC_ERROR;
+        return resultado;
     }
     
     buffer[tamanio] = '\0'; // Null-terminator para strings

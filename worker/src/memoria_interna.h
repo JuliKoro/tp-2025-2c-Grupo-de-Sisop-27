@@ -19,7 +19,7 @@
  */
 extern memoria_interna* memoria_worker;
 
-// --- FUNCIONES DE MEMORIA ---
+// --- FUNCIONES DE MEMORIA INTERNA ---
 
 /**
  * @brief Inicializa las estructuras administrativas de la memoria y reserva el espacio contiguo.
@@ -92,6 +92,22 @@ int ejecutar_algoritmo_reemplazo(const char* file_nuevo, const char* tag_nuevo, 
 int buscar_marco_libre(void);
 
 /**
+ * @brief Calcula el número de página a partir de una dirección lógica
+ * 
+ * @param dir_logica Dirección lógica
+ * @return Número de página
+ */
+uint32_t numero_pagina(uint32_t dir_logica);
+
+/**
+ * @brief Calcula el offset dentro de la página a partir de una dirección lógica
+ * 
+ * @param dir_logica Dirección lógica
+ * @return Offset dentro de la página
+ */
+uint32_t offset_pagina(uint32_t dir_logica);
+
+/**
  * @brief Traduce una dirección lógica a física
  * 
  * Usa la variable global memoria_worker directamente.
@@ -115,11 +131,10 @@ bool traducir_direccion(const char* file,
  * @param file Nombre del archivo
  * @param tag Nombre del tag
  * @param num_pagina Número de página a cargar
- * @return Número de marco asignado, o -1 si hubo error
+ * @param marco [OUT] Número de marco asignado
+ * @return Resultado de la operación
  */
-int manejar_page_fault(const char* file,
-                       const char* tag,
-                       uint32_t num_pagina);
+t_resultado_ejecucion manejar_page_fault(const char* file, const char* tag, uint32_t num_pagina, int* marco);
 
 /**
  * @brief Solicita un bloque a Storage
@@ -138,41 +153,31 @@ bool solicitar_bloque_storage(const char* file, const char* tag, uint32_t num_pa
  */
 t_resultado_ejecucion recibir_bloque_storage(void* bloque);
 
+// --- OPERACIONES DE MEMORIA INTERNA/STORAGE ---
+
 /**
  * @brief Lee contenido de la memoria interna
- * 
- * Usa la variable global memoria_worker directamente.
  * 
  * @param file Nombre del archivo
  * @param tag Nombre del tag
  * @param dir_logica Dirección lógica inicial
  * @param tamanio Cantidad de bytes a leer
  * @param buffer [OUT] Buffer donde se copiará el contenido
- * @return true si la lectura fue exitosa
+ * @return Resultado de la operación
  */
-bool leer_memoria(const char* file,
-                  const char* tag,
-                  uint32_t dir_logica,
-                  uint32_t tamanio,
-                  void* buffer);
+t_resultado_ejecucion leer_memoria(const char* file, const char* tag, uint32_t dir_logica, uint32_t tamanio, void* buffer);
 
 /**
  * @brief Escribe contenido en la memoria interna
- * 
- * Usa la variable global memoria_worker directamente.
  * 
  * @param file Nombre del archivo
  * @param tag Nombre del tag
  * @param dir_logica Dirección lógica inicial
  * @param contenido Contenido a escribir
  * @param tamanio Cantidad de bytes a escribir
- * @return true si la escritura fue exitosa
+ * @return Resultado de la operación
  */
-bool escribir_memoria(const char* file,
-                      const char* tag,
-                      uint32_t dir_logica,
-                      const void* contenido,
-                      uint32_t tamanio);
+t_resultado_ejecucion escribir_memoria(const char* file, const char* tag, uint32_t dir_logica, const void* contenido, uint32_t tamanio);
 
 /**
  * @brief Persiste todas las páginas modificadas de un File:Tag
