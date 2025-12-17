@@ -12,6 +12,7 @@
 
 #include "registros.h" // para logger_worker
 #include "tabla_de_paginas.h"
+#include "query_interpreter.h"
 
 // Variable global de memoria (declarada como extern para que worker.c la vea)
 /**
@@ -74,11 +75,12 @@ int encontrar_victima_clock_m(void);
  * @param file_nuevo Nombre del archivo de la nueva página
  * @param tag_nuevo Nombre del tag de la nueva página
  * @param pag_nueva Número de página de la nueva página
- * @return Número de marco liberado
+ * @param marco_asignado [OUT] Puntero donde se guardará el número de marco liberado
+ * @return Resultado de la ejecución (EXEC_OK si salió bien)
  * @note Función "despachadora" que llama al algoritmo de reemplazo
  * configurado, desaloja la página y devuelve el marco liberado.
  */
-int ejecutar_algoritmo_reemplazo(const char* file_nuevo, const char* tag_nuevo, int pag_nueva);
+t_resultado_ejecucion ejecutar_algoritmo_reemplazo(const char* file_nuevo, const char* tag_nuevo, int pag_nueva, int* marco_asignado);
 
 // --- FUNCIONES DE TRADUCCIÓN Y ACCESO A MEMORIA ---
 
@@ -186,9 +188,32 @@ t_resultado_ejecucion escribir_memoria(const char* file, const char* tag, uint32
  * 
  * @param file Nombre del archivo
  * @param tag Nombre del tag
- * @return true si el flush fue exitoso
+ * @return Resultado de la operación (EXEC_OK si salió bien)
  */
-bool flush_file_tag(const char* file,
-                    const char* tag);
+t_resultado_ejecucion flush_file_tag(const char* file, const char* tag);
+
+/**
+ * @brief Envía una página modificada al Storage para persistirla
+ * 
+ * @param file Nombre del archivo
+ * @param tag Nombre del tag
+ * @param num_pagina Número de página a persistir
+ * @return Resultado de la operación (EXEC_OK si salió bien)
+ */
+t_resultado_ejecucion flush_pagina(const char* file, const char* tag, uint32_t num_pagina);
+
+/**
+ * @brief Libera la memoria ocupada por un bloque de escritura
+ * 
+ * @param bloque Puntero al bloque a liberar
+ */
+void liberar_bloque(t_sol_write* bloque);
+
+/**
+ * @brief Persiste todas las páginas modificadas en memoria
+ * 
+ * @return Resultado de la operación (EXEC_OK si salió bien)
+ */
+t_resultado_ejecucion flush_all(void);
 
 #endif

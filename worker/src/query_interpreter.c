@@ -364,8 +364,12 @@ t_resultado_ejecucion execute_read(char* file_name, char* tag_name, uint32_t dir
     
     buffer[tamanio] = '\0'; // Null-terminator para strings
     
-    // TODO: Enviar contenido leído al Master para que lo reenvíe al Query Control
     log_debug(logger_worker, "Contenido leído: %s", buffer);
+    if (!enviar_info_a_master(buffer, tamanio)) {
+        log_error(logger_worker, "Error al enviar contenido leído al Master");
+        free(buffer);
+        return ERROR_CONEXION;
+    }
     
     free(buffer);
     return EXEC_OK;
@@ -426,12 +430,12 @@ t_resultado_ejecucion execute_flush(char* file_name, char* tag_name) {
     }
     
     log_debug(logger_worker, "Ejecutando FLUSH %s:%s", file_name, tag_name);
-    
 
     // Flush del File:Tag
-    if (!flush_file_tag(file_name, tag_name)) {
+    t_resultado_ejecucion resultado = flush_file_tag(file_name, tag_name);
+    if (resultado != EXEC_OK) {
         log_error(logger_worker, "Error al hacer flush de %s:%s", file_name, tag_name);
-        return EXEC_ERROR;
+        return resultado;
     }
     
     log_debug(logger_worker, "FLUSH completado para %s:%s", file_name, tag_name);
@@ -524,6 +528,25 @@ t_resultado_ejecucion recibir_respuesta_storage() {
             return EXEC_ERROR;
     }
 
+}
+
+bool enviar_info_a_master(char* info, uint32_t size_info) {
+    t_bloque_leido* bloque = malloc(sizeof(t_bloque_leido));
+    bloque->id_query = id_query;
+    bloque->tamanio = size_info;
+    bloque->contenido = info;
+
+    t_buffer* buffer = serializar_bloque_leido(bloque);
+    t_paquete* paquete = empaquetar_buffer(OP_READ, buffer);
+
+    if (enviar_paquete(conexion_master, paquete) == -1) {
+        log_error(logger_worker, "Error al enviar información al Master");
+        free(bloque);
+        return false;
+    }
+
+    free(bloque);
+    return true;
 }
 
 bool notificar_resultado_a_master(t_resultado_ejecucion estado) {

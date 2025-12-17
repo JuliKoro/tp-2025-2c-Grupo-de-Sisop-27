@@ -269,12 +269,11 @@ int encontrar_victima_clock_m(void) {
     return tabla->puntero_clock;
 }
 
-int ejecutar_algoritmo_reemplazo(const char* file_nuevo, const char* tag_nuevo, int pag_nueva) {
+t_resultado_ejecucion ejecutar_algoritmo_reemplazo(const char* file_nuevo, const char* tag_nuevo, int pag_nueva, int* marco_asignado) {
 
     int indice_victima = -1;
 
     // Acá usamos el config para decidir qué algoritmo usar
-    // Usamos worker_configs que trajimos con extern
     if (strcmp(worker_configs->algoritmo_reemplazo, "LRU") == 0) {
         indice_victima = encontrar_victima_lru();
     } else if (strcmp(worker_configs->algoritmo_reemplazo, "CLOCK-M") == 0) {
@@ -287,7 +286,7 @@ int ejecutar_algoritmo_reemplazo(const char* file_nuevo, const char* tag_nuevo, 
 
     if (indice_victima == -1) {
         log_error(logger_worker, "Error: No se pudo encontrar una víctima para reemplazo.");
-        return -1; // Error grave
+        return ERROR_MEMORIA_INTERNA; // Error grave
     }
 
     entrada_tabla_paginas* victima = memoria_worker->tabla->entradas[indice_victima];
@@ -302,11 +301,12 @@ int ejecutar_algoritmo_reemplazo(const char* file_nuevo, const char* tag_nuevo, 
         log_info(logger_worker, "Página víctima (%s:%s Pag %d) modificada. Iniciando FLUSH.",
                  victima->file_name, victima->tag_name, victima->numero_pagina);
 
-        // TODO: IMPLEMENTAR LÓGICA DE FLUSH 
-        // 1. Calcular dirección física: (memoria_worker->memoria + (victima->marco * memoria_worker->tam_pagina))
-        // 2. Enviar ese bloque de memoria al Storage (junto con file, tag y num_pagina/bloque)
-        // 3. Esperar OK de Storage
+        t_resultado_ejecucion resultado_flush = flush_pagina(victima->file_name, victima->tag_name, victima->numero_pagina);
 
+        if (resultado_flush != EXEC_OK) {
+            log_error(logger_worker, "Error crítico: Falló el flush de la página víctima. Se perderán datos.");
+            return resultado_flush; // Propagamos el error y abortamos el reemplazo
+        }
     }
 
     // "Desalojar" la página (sin borrar la entrada, solo marcarla como ausente)
@@ -320,7 +320,10 @@ int ejecutar_algoritmo_reemplazo(const char* file_nuevo, const char* tag_nuevo, 
     log_info(logger_worker, "## Se libera el Marco: %d perteneciente al - File: %s - Tag: %s", 
              marco_liberado, victima->file_name, victima->tag_name);
 
-    return marco_liberado;
+    if (marco_asignado != NULL) {
+        *marco_asignado = marco_liberado;
+    }
+    return EXEC_OK;
 }
 
 // ============================================================================
@@ -395,11 +398,11 @@ t_resultado_ejecucion manejar_page_fault(const char* file, const char* tag, uint
     // Si no hay marco libre, ejecutar algoritmo de reemplazo
     if (marco_asignado == -1) {
         log_warning(logger_worker, "No hay marcos libres. Ejecutando algoritmo de reemplazo.");
-        marco_asignado = ejecutar_algoritmo_reemplazo(file, tag, num_pagina);
+        t_resultado_ejecucion res_reemplazo = ejecutar_algoritmo_reemplazo(file, tag, num_pagina, &marco_asignado);
         
-        if (marco_asignado < 0) {
-            log_error(logger_worker, "Error al ejecutar algoritmo de reemplazo");
-            return ERROR_MEMORIA_INTERNA;
+        if (res_reemplazo != EXEC_OK) {
+            log_error(logger_worker, "Error al ejecutar algoritmo de reemplazo: %d", res_reemplazo);
+            return res_reemplazo;
         }
     }
     
@@ -520,6 +523,59 @@ t_resultado_ejecucion recibir_bloque_storage(void* bloque) {
     return EXEC_OK;
 }
 
+t_resultado_ejecucion flush_pagina(const char* file, const char* tag, uint32_t num_pagina) {
+    entrada_tabla_paginas* entrada = buscar_pagina(file, tag, num_pagina);
+    if (!entrada || !entrada->presente) {
+        log_error(logger_worker, "No se puede hacer flush: página no está en memoria");
+        return ERROR_MEMORIA_INTERNA;
+    }
+
+    // Calcular dirección física
+    uint32_t dir_fisica = (entrada->marco * memoria_worker->tam_pagina);
+
+    // Preparar bloque para enviar a Storage
+    t_sol_write* bloque = malloc(sizeof(t_sol_write));
+    bloque->id_query = id_query;
+    bloque->file_name = strdup(file);
+    bloque->tag_name = strdup(tag);
+    bloque->numero_bloque = num_pagina;
+    bloque->tamanio = memoria_worker->tam_pagina;
+    bloque->contenido = malloc(bloque->tamanio);
+    
+    // Copiar contenido de memoria real al buffer
+    memcpy(bloque->contenido, memoria_worker->memoria + dir_fisica, bloque->tamanio);
+
+    // Serializar y enviar a Storage
+    t_buffer* buffer_flush = serializar_solicitud_write(bloque);
+    t_paquete* paquete_flush = empaquetar_buffer(OP_WRITE, buffer_flush);
+
+    if (enviar_paquete(conexion_storage, paquete_flush) == -1) {
+        log_error(logger_worker, "Error al enviar flush a Storage");
+        liberar_bloque(bloque);
+        return ERROR_CONEXION;
+    }
+
+    // Liberar recursos
+    liberar_bloque(bloque);
+
+    t_resultado_ejecucion respuesta_storage = recibir_respuesta_storage();
+    if (respuesta_storage != EXEC_OK) {
+        log_error(logger_worker, "Error al recibir respuesta de flush desde Storage");
+        return respuesta_storage;
+    }
+    
+    log_info(logger_worker, "Flush completado para %s:%s Página %d", file, tag, num_pagina);
+    return EXEC_OK;
+}
+
+void liberar_bloque(t_sol_write* bloque) {
+    if (!bloque) return;
+    if (bloque->file_name) free(bloque->file_name);
+    if (bloque->tag_name) free(bloque->tag_name);
+    if (bloque->contenido) free(bloque->contenido);
+    free(bloque);
+}
+
 // OPERACIONES DE MEMORIA INTERNA/STORAGE
 
 t_resultado_ejecucion leer_memoria(const char* file, const char* tag, uint32_t dir_logica, uint32_t tamanio, void* buffer) {
@@ -571,13 +627,11 @@ t_resultado_ejecucion leer_memoria(const char* file, const char* tag, uint32_t d
         void* origen = memoria_worker->memoria + dir_fisica;
         memcpy((char*)buffer + bytes_leidos, origen, bytes_a_leer);
         
-        // Log obligatorio de lectura (solo para la primera lectura o si cruza páginas)
-        if (bytes_leidos == 0) {
-            char contenido_str[256];
-            snprintf(contenido_str, sizeof(contenido_str), "%.*s", (int)bytes_a_leer, (char*)origen);
-            log_info(logger_worker, "Query %d: Acción: LEER - Dirección Física: %d - Valor: %s",
-                     id_query, dir_fisica, contenido_str);
-        }
+        // Log obligatorio de lectura (por cada acceso a marco físico)
+        char contenido_str[256];
+        snprintf(contenido_str, sizeof(contenido_str), "%.*s", (int)bytes_a_leer, (char*)origen);
+        log_info(logger_worker, "Query %d: Acción: LEER - Dirección Física: %d - Valor: %s",
+                    id_query, dir_fisica, contenido_str);
         
         // Aplicar retardo de memoria
         if (worker_configs->retardo_memoria > 0) {
@@ -589,7 +643,7 @@ t_resultado_ejecucion leer_memoria(const char* file, const char* tag, uint32_t d
     }
     
     log_debug(logger_worker, "Lectura completada: %d bytes", bytes_leidos);
-    return true;
+    return EXEC_OK;
 }
 
 
@@ -643,14 +697,12 @@ t_resultado_ejecucion escribir_memoria(const char* file, const char* tag, uint32
             entrada->modificado = 1;
         }
         
-        // Log obligatorio de escritura (solo para la primera escritura)
-        if (bytes_escritos == 0) {
-            char contenido_str[256];
-            snprintf(contenido_str, sizeof(contenido_str), "%.*s", (int)bytes_a_escribir, (char*)contenido);
-            // Log Obligatorio - Escritura Memoria
-            log_info(logger_worker, "## Query %d: Acción: ESCRIBIR - Dirección Física: %d - Valor: %s",
-                     id_query, dir_fisica, contenido_str);
-        }
+        // Log obligatorio de escritura (por cada acceso a marco físico)
+        char contenido_str[256];
+        snprintf(contenido_str, sizeof(contenido_str), "%.*s", (int)bytes_a_escribir, (char*)contenido);
+        // Log Obligatorio - Escritura Memoria
+        log_info(logger_worker, "## Query %d: Acción: ESCRIBIR - Dirección Física: %d - Valor: %s",
+                    id_query, dir_fisica, contenido_str);
         
         // Aplicar retardo de memoria
         if (worker_configs->retardo_memoria > 0) {
@@ -665,11 +717,9 @@ t_resultado_ejecucion escribir_memoria(const char* file, const char* tag, uint32
     return EXEC_OK;
 }
 
-
-bool flush_file_tag(const char* file,
-                    const char* tag) {
+t_resultado_ejecucion flush_file_tag(const char* file, const char* tag) {
     if (!memoria_worker || !file || !tag) {
-        return false;
+        return ERROR_MEMORIA_INTERNA;
     }
     
     log_debug(logger_worker, "Iniciando FLUSH de %s:%s", file, tag);
@@ -688,16 +738,11 @@ bool flush_file_tag(const char* file,
         
         // Solo persistir si está presente Y modificada
         if (entrada->presente && entrada->modificado) {
-            // Obtener contenido de la página en memoria
-            void* contenido = memoria_worker->memoria + (entrada->marco * memoria_worker->tam_pagina);
-            
-            // TODO: El usuario debe implementar el envío a Storage
-            // - Crear estructura t_write con file, tag, numero_bloque=numero_pagina, contenido, tamanio
-            // - Enviar solicitud a Storage
-            // - Esperar confirmación
-            
-            log_info(logger_worker, "Página %d de %s:%s persistida en Storage",
-                     entrada->numero_pagina, file, tag);
+            t_resultado_ejecucion res = flush_pagina(file, tag, entrada->numero_pagina);
+            if (res != EXEC_OK) {
+                log_error(logger_worker, "Error al hacer flush de página %d de %s:%s", entrada->numero_pagina, file, tag);
+                return res;
+            }
             
             // Marcar como no modificada
             entrada->modificado = 0;
@@ -711,5 +756,36 @@ bool flush_file_tag(const char* file,
     }
     
     log_debug(logger_worker, "FLUSH completado: %d páginas persistidas", paginas_flusheadas);
-    return true;
+    return EXEC_OK;
+}
+
+t_resultado_ejecucion flush_all(void) {
+    if (!memoria_worker) {
+        return ERROR_MEMORIA_INTERNA;
+    }
+    
+    log_debug(logger_worker, "Iniciando FLUSH de toda la memoria");
+    
+    int paginas_flusheadas = 0;
+    
+    // Recorrer todas las entradas de la tabla
+    for (int i = 0; i < memoria_worker->tabla->cantidad_entradas; i++) {
+        entrada_tabla_paginas* entrada = memoria_worker->tabla->entradas[i];
+        
+        // Solo persistir si está presente Y modificada
+        if (entrada->presente && entrada->modificado) {
+            t_resultado_ejecucion res = flush_pagina(entrada->file_name, entrada->tag_name, entrada->numero_pagina);
+            if (res != EXEC_OK) {
+                log_error(logger_worker, "Error al hacer flush de página %d de %s:%s", entrada->numero_pagina, entrada->file_name, entrada->tag_name);
+                return res;
+            }
+            
+            // Marcar como no modificada
+            entrada->modificado = 0;
+            paginas_flusheadas++;
+        }
+    }
+    
+    log_debug(logger_worker, "FLUSH completado: %d páginas persistidas", paginas_flusheadas);
+    return EXEC_OK;
 }

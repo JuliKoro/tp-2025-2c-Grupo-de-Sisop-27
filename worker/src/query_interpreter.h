@@ -218,6 +218,14 @@ t_resultado_ejecucion execute_end();
 bool enviar_instruccion(e_codigo_operacion cod_op, void* estructura_inst);
 
 /**
+ * @brief Envía el contenido leído (READ) al Master
+ * @param info Puntero al contenido leído
+ * @param size_info Tamaño del contenido
+ * @return true si se envió correctamente
+ */
+bool enviar_info_a_master(char* info, uint32_t size_info);
+
+/**
  * @brief Recibe la respuesta del Storage tras ejecutar una instrucción
  * @return Resultado de la ejecución recibido del Storage
  */

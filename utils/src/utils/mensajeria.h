@@ -332,6 +332,7 @@ t_truncate* deserializar_truncate(t_buffer* buffer);
  * @brief Serializa una instrucción WRITE
  * @param write Puntero a t_write a serializar
  * @return t_buffer* Buffer con la serialización
+ * @note DEPRECADO
  */
 t_buffer* serializar_write(t_write* write);
 
@@ -339,6 +340,7 @@ t_buffer* serializar_write(t_write* write);
  * @brief Deserializa una instrucción WRITE
  * @param buffer Puntero al t_buffer a deserializar
  * @return t_write* Estructura t_write deserializada
+ * @note DEPRECADO
  */
 t_write* deserializar_write(t_buffer* buffer);
 
@@ -346,6 +348,7 @@ t_write* deserializar_write(t_buffer* buffer);
  * @brief Serializa una instrucción READ
  * @param read Puntero a t_read a serializar
  * @return t_buffer* Buffer con la serialización
+ * @note DEPRECADO
  */
 t_buffer* serializar_read(t_read* read);
 
@@ -353,6 +356,7 @@ t_buffer* serializar_read(t_read* read);
  * @brief Deserializa una instrucción READ
  * @param buffer Puntero al t_buffer a deserializar
  * @return t_read* Estructura t_read deserializada
+ * @note DEPRECADO
  */
 t_read* deserializar_read(t_buffer* buffer);
 

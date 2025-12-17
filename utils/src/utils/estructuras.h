@@ -181,7 +181,7 @@ typedef struct {
 } t_truncate;
 
 /**
- * Write: escribir contenido en un offset
+ * Write: escribir contenido en un offset (DEPRECADO)
  */
 typedef struct {
     uint32_t id_query;
@@ -193,7 +193,7 @@ typedef struct {
 } t_write;
 
 /**
- * Read: leer contenido desde offset tamaño
+ * Read: leer contenido desde offset tamaño (DEPRECADO)
  */
 typedef struct {
     uint32_t id_query;
@@ -224,7 +224,7 @@ typedef struct {
 } t_commit;
 
 /**
- * Flush: enviar todos los cambios de File:Tag a FS
+ * Flush: enviar todos los cambios de File:Tag a FS (DEPRECADO)
  */
 typedef struct {
     uint32_t id_query;
@@ -245,6 +245,10 @@ typedef struct {
 
 /**
  * @brief Estructura para la solicitud de lectura de Storage
+ * @param file_name el nombre del archivo - char*
+ * @param tag_name el nombre del tag - char*
+ * @param numero_bloque el número de bloque a leer - uint32_t
+ * @param tamanio el tamaño del bloque a leer - uint32_t
  */
 typedef struct {
     uint32_t id_query;
@@ -268,6 +272,11 @@ typedef struct {
 
 /**
  * @brief Estructura para la solicitud de escritura de Storage
+ * @param file_name el nombre del archivo - char*
+ * @param tag_name el nombre del tag - char*
+ * @param numero_bloque el número de bloque a escribir - uint32_t
+ * @param contenido el contenido a escribir - void*
+ * @param tamanio el tamaño del contenido a escribir - uint32_t
  */
 typedef struct {
     uint32_t id_query;

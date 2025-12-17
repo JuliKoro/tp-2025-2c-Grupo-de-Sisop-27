@@ -84,8 +84,6 @@ int main(int argc, char* argv[]) {
 
     finalizar_worker();
 
-
-
     return 0;
 }
 
@@ -191,6 +189,8 @@ void* hilo_query_interpreter(void* arg){
             log_warning(logger_worker, "Query %d fue desalojada en PC: %d.", id_query, pc_actual);
         } 
         
+        resultado = flush_all(); // Asegurar que todo esté persistido al finalizar o desalojar
+
         if (!notificar_resultado_a_master(resultado)) {
             log_error(logger_worker, "Error al notificar resultado de la Query %d al Master", id_query);
         }
@@ -222,8 +222,6 @@ void inicializar_worker(char* nombre_config, char* id_worker_str){
 }
 
 void desalojar_query(){
-    // Hacer flush de páginas modificadas
-    //flush_all(memoria_worker); // TODO memoria_interna.c
     // Limpiar estado
     //resultado = EXEC_OK;
     pc_actual = 0;
