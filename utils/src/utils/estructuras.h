@@ -165,6 +165,7 @@ typedef struct {
  * Create: crear File:Tag
  */
 typedef struct {
+    uint32_t id_query;
     char* file_name;
     char* tag_name;
 } t_create;
@@ -173,6 +174,7 @@ typedef struct {
  * Truncate: truncar archivo a tamaño
  */
 typedef struct {
+    uint32_t id_query;
     char* file_name;
     char* tag_name;
     uint32_t size;
@@ -182,6 +184,7 @@ typedef struct {
  * Write: escribir contenido en un offset
  */
 typedef struct {
+    uint32_t id_query;
     char* file_name;
     char* tag_name;
     uint32_t offset;
@@ -193,6 +196,7 @@ typedef struct {
  * Read: leer contenido desde offset tamaño
  */
 typedef struct {
+    uint32_t id_query;
     char* file_name;
     char* tag_name;
     uint32_t offset;
@@ -203,6 +207,7 @@ typedef struct {
  * Tag: crear tag temporal (o permanente)
  */
 typedef struct {
+    uint32_t id_query;
     char* file_name_origen;
     char* tag_name_origen;
     char* file_name_destino;
@@ -213,6 +218,7 @@ typedef struct {
  * Commit: confirmar un tag
  */
 typedef struct {
+    uint32_t id_query;
     char* file_name;
     char* tag_name;
 } t_commit;
@@ -221,6 +227,7 @@ typedef struct {
  * Flush: enviar todos los cambios de File:Tag a FS
  */
 typedef struct {
+    uint32_t id_query;
     char* file_name;
     char* tag_name;
 } t_flush;
@@ -229,6 +236,7 @@ typedef struct {
  * Delete: eliminar tag o file
  */
 typedef struct {
+    uint32_t id_query;
     char* file_name;
     char* tag_name;
 } t_delete;
@@ -236,30 +244,33 @@ typedef struct {
 // SOLICITUDES MEMORIA INTERNA A STORAGE
 
 /**
- * @brief Estructura para la solicitud de lectura de memoria interna
+ * @brief Estructura para la solicitud de lectura de Storage
  */
 typedef struct {
+    uint32_t id_query;
     char* file_name;
     char* tag_name;
     uint32_t numero_bloque;
     uint32_t tamanio;
 } t_sol_read;
 
-// Estructura para la respuesta de lectura de memoria interna
+// Estructura para la respuesta de lectura de Storage
 /**
- * @brief Estructura para la respuesta de lectura de memoria interna
+ * @brief Estructura para la respuesta de lectura de Storage
  * @param contenido el contenido leído - void*
  * @param tamanio el tamaño del contenido leído - uint32_t
  */
 typedef struct {
+    uint32_t id_query;
     void* contenido;
     uint32_t tamanio;
 } t_bloque_leido;
 
 /**
- * @brief Estructura para la solicitud de lectura de memoria interna
+ * @brief Estructura para la solicitud de escritura de Storage
  */
 typedef struct {
+    uint32_t id_query;
     char* file_name;
     char* tag_name;
     uint32_t numero_bloque;

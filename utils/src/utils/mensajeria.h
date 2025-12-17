@@ -455,9 +455,19 @@ t_buffer* serializar_bloque_leido(t_bloque_leido* bloque);
  */
 t_bloque_leido* deserializar_bloque_leido(t_buffer* buffer);
 
+/**
+ * @brief Serializa una solicitud de escritura de memoria interna (flush)
+ * @param solicitud Puntero a t_sol_write a serializar
+ * @return t_buffer* Buffer con la serialización
+ */
+t_buffer* serializar_solicitud_write(t_sol_write* solicitud);
+
+/**
+ * @brief Deserializa una solicitud de escritura de memoria interna (flush)
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_sol_write* Estructura t_sol_write deserializada
+ */
+t_sol_write* deserializar_solicitud_write(t_buffer* buffer);
+
 #endif
  
-
-
-
-

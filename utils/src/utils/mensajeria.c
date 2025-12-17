@@ -490,7 +490,12 @@ t_resultado_query* deserializar_resultado_query(t_buffer* buffer) {
 // Serialización para cada tipo de isntruccion
 
 t_buffer* serializar_create(t_create* create) {
-    t_buffer* buffer = crear_buffer(0); // Creo buffer con tam 0, para que sea dinamico y se adopte (REVISAR)
+    uint32_t size = sizeof(uint32_t) + // id_query
+                    sizeof(uint32_t) + strlen(create->file_name) + 1 + // file_name (len + string)
+                    sizeof(uint32_t) + strlen(create->tag_name) + 1;   // tag_name (len + string)
+
+    t_buffer* buffer = crear_buffer(size);
+    buffer_add_uint32(buffer, create->id_query);
     buffer_add_string(buffer, strlen(create->file_name) + 1, create->file_name);
     buffer_add_string(buffer, strlen(create->tag_name) + 1, create->tag_name);
     return buffer;
@@ -498,13 +503,20 @@ t_buffer* serializar_create(t_create* create) {
 
 t_create* deserializar_create(t_buffer* buffer) {
     t_create* create = malloc(sizeof(t_create));
+    create->id_query = buffer_read_uint32(buffer);
     create->file_name = buffer_read_string(buffer);
     create->tag_name = buffer_read_string(buffer);
     return create;
 }
 
 t_buffer* serializar_truncate(t_truncate* truncate) {
-    t_buffer* buffer = crear_buffer(0);
+    uint32_t size = sizeof(uint32_t) + // id_query
+                    sizeof(uint32_t) + strlen(truncate->file_name) + 1 + // file_name
+                    sizeof(uint32_t) + strlen(truncate->tag_name) + 1 +  // tag_name
+                    sizeof(uint32_t); // size
+
+    t_buffer* buffer = crear_buffer(size);
+    buffer_add_uint32(buffer, truncate->id_query);
     buffer_add_string(buffer, strlen(truncate->file_name) + 1, truncate->file_name);
     buffer_add_string(buffer, strlen(truncate->tag_name) + 1, truncate->tag_name);
     buffer_add_uint32(buffer, truncate->size);
@@ -513,6 +525,7 @@ t_buffer* serializar_truncate(t_truncate* truncate) {
 
 t_truncate* deserializar_truncate(t_buffer* buffer) {
     t_truncate* truncate = malloc(sizeof(t_truncate));
+    truncate->id_query = buffer_read_uint32(buffer);
     truncate->file_name = buffer_read_string(buffer);
     truncate->tag_name = buffer_read_string(buffer);
     truncate->size = buffer_read_uint32(buffer);
@@ -520,7 +533,14 @@ t_truncate* deserializar_truncate(t_buffer* buffer) {
 }
 
 t_buffer* serializar_write(t_write* write) {
-    t_buffer* buffer = crear_buffer(0);
+    uint32_t size = sizeof(uint32_t) + // id_query
+                    sizeof(uint32_t) + strlen(write->file_name) + 1 + // file_name
+                    sizeof(uint32_t) + strlen(write->tag_name) + 1 +  // tag_name
+                    sizeof(uint32_t) + // offset
+                    sizeof(uint32_t) + // size
+                    write->size;       // content
+    t_buffer* buffer = crear_buffer(size);
+    buffer_add_uint32(buffer, write->id_query);
     buffer_add_string(buffer, strlen(write->file_name) + 1, write->file_name);
     buffer_add_string(buffer, strlen(write->tag_name) + 1, write->tag_name);
     buffer_add_uint32(buffer, write->offset);
@@ -531,6 +551,7 @@ t_buffer* serializar_write(t_write* write) {
 
 t_write* deserializar_write(t_buffer* buffer) {
     t_write* write = malloc(sizeof(t_write));
+    write->id_query = buffer_read_uint32(buffer);
     write->file_name = buffer_read_string(buffer);
     write->tag_name = buffer_read_string(buffer);
     write->offset = buffer_read_uint32(buffer);
@@ -541,7 +562,13 @@ t_write* deserializar_write(t_buffer* buffer) {
 }
 
 t_buffer* serializar_read(t_read* read) {
-    t_buffer* buffer = crear_buffer(0);
+    uint32_t size = sizeof(uint32_t) + // id_query
+                    sizeof(uint32_t) + strlen(read->file_name) + 1 + // file_name
+                    sizeof(uint32_t) + strlen(read->tag_name) + 1 +  // tag_name
+                    sizeof(uint32_t) + // offset
+                    sizeof(uint32_t);  // size
+    t_buffer* buffer = crear_buffer(size);
+    buffer_add_uint32(buffer, read->id_query);
     buffer_add_string(buffer, strlen(read->file_name) + 1, read->file_name);
     buffer_add_string(buffer, strlen(read->tag_name) + 1, read->tag_name);
     buffer_add_uint32(buffer, read->offset);
@@ -551,6 +578,7 @@ t_buffer* serializar_read(t_read* read) {
 
 t_read* deserializar_read(t_buffer* buffer) {
     t_read* read = malloc(sizeof(t_read));
+    read->id_query = buffer_read_uint32(buffer);
     read->file_name = buffer_read_string(buffer);
     read->tag_name = buffer_read_string(buffer);
     read->offset = buffer_read_uint32(buffer);
@@ -559,7 +587,13 @@ t_read* deserializar_read(t_buffer* buffer) {
 }
 
 t_buffer* serializar_tag(t_tag* tag) {
-    t_buffer* buffer = crear_buffer(0);
+    uint32_t size = sizeof(uint32_t) + // id_query
+                    sizeof(uint32_t) + strlen(tag->file_name_origen) + 1 +
+                    sizeof(uint32_t) + strlen(tag->tag_name_origen) + 1 +
+                    sizeof(uint32_t) + strlen(tag->file_name_destino) + 1 +
+                    sizeof(uint32_t) + strlen(tag->tag_name_destino) + 1;
+    t_buffer* buffer = crear_buffer(size);
+    buffer_add_uint32(buffer, tag->id_query);
     buffer_add_string(buffer, strlen(tag->file_name_origen) + 1, tag->file_name_origen);
     buffer_add_string(buffer, strlen(tag->tag_name_origen) + 1, tag->tag_name_origen);
     buffer_add_string(buffer, strlen(tag->file_name_destino) + 1, tag->file_name_destino);
@@ -569,6 +603,7 @@ t_buffer* serializar_tag(t_tag* tag) {
 
 t_tag* deserializar_tag(t_buffer* buffer) {
     t_tag* tag = malloc(sizeof(t_tag));
+    tag->id_query = buffer_read_uint32(buffer);
     tag->file_name_origen = buffer_read_string(buffer);
     tag->tag_name_origen = buffer_read_string(buffer);
     tag->file_name_destino = buffer_read_string(buffer);
@@ -577,7 +612,11 @@ t_tag* deserializar_tag(t_buffer* buffer) {
 }
 
 t_buffer* serializar_commit(t_commit* commit) {
-    t_buffer* buffer = crear_buffer(0);
+    uint32_t size = sizeof(uint32_t) + // id_query
+                    sizeof(uint32_t) + strlen(commit->file_name) + 1 +
+                    sizeof(uint32_t) + strlen(commit->tag_name) + 1;
+    t_buffer* buffer = crear_buffer(size);
+    buffer_add_uint32(buffer, commit->id_query);
     buffer_add_string(buffer, strlen(commit->file_name) + 1, commit->file_name);
     buffer_add_string(buffer, strlen(commit->tag_name) + 1, commit->tag_name);
     return buffer;
@@ -585,13 +624,18 @@ t_buffer* serializar_commit(t_commit* commit) {
 
 t_commit* deserializar_commit(t_buffer* buffer) {
     t_commit* commit = malloc(sizeof(t_commit));
+    commit->id_query = buffer_read_uint32(buffer);
     commit->file_name = buffer_read_string(buffer);
     commit->tag_name = buffer_read_string(buffer);
     return commit;
 }
 
 t_buffer* serializar_flush(t_flush* flush) {
-    t_buffer* buffer = crear_buffer(0);
+    uint32_t size = sizeof(uint32_t) + // id_query
+                    sizeof(uint32_t) + strlen(flush->file_name) + 1 +
+                    sizeof(uint32_t) + strlen(flush->tag_name) + 1;
+    t_buffer* buffer = crear_buffer(size);
+    buffer_add_uint32(buffer, flush->id_query);
     buffer_add_string(buffer, strlen(flush->file_name) + 1, flush->file_name);
     buffer_add_string(buffer, strlen(flush->tag_name) + 1, flush->tag_name);
     return buffer;
@@ -599,13 +643,18 @@ t_buffer* serializar_flush(t_flush* flush) {
 
 t_flush* deserializar_flush(t_buffer* buffer) {
     t_flush* flush = malloc(sizeof(t_flush));
+    flush->id_query = buffer_read_uint32(buffer);
     flush->file_name = buffer_read_string(buffer);
     flush->tag_name = buffer_read_string(buffer);
     return flush;
 }
 
 t_buffer* serializar_delete(t_delete* delete) {
-    t_buffer* buffer = crear_buffer(0);
+    uint32_t size = sizeof(uint32_t) + // id_query
+                    sizeof(uint32_t) + strlen(delete->file_name) + 1 +
+                    sizeof(uint32_t) + strlen(delete->tag_name) + 1;
+    t_buffer* buffer = crear_buffer(size);
+    buffer_add_uint32(buffer, delete->id_query);
     buffer_add_string(buffer, strlen(delete->file_name) + 1, delete->file_name);
     buffer_add_string(buffer, strlen(delete->tag_name) + 1, delete->tag_name);
     return buffer;
@@ -613,13 +662,20 @@ t_buffer* serializar_delete(t_delete* delete) {
 
 t_delete* deserializar_delete(t_buffer* buffer) {
     t_delete* delete = malloc(sizeof(t_delete));
+    delete->id_query = buffer_read_uint32(buffer);
     delete->file_name = buffer_read_string(buffer);
     delete->tag_name = buffer_read_string(buffer);
     return delete;
 }
 
 t_buffer* serializar_solicitud_read(t_sol_read* solicitud) {
-    t_buffer* buffer = crear_buffer(0);
+    uint32_t size = sizeof(uint32_t) + // id_query
+                    sizeof(uint32_t) + strlen(solicitud->file_name) + 1 +
+                    sizeof(uint32_t) + strlen(solicitud->tag_name) + 1 +
+                    sizeof(uint32_t) + // numero_bloque
+                    sizeof(uint32_t);  // tamanio
+    t_buffer* buffer = crear_buffer(size);
+    buffer_add_uint32(buffer, solicitud->id_query);
     buffer_add_string(buffer, strlen(solicitud->file_name) + 1, solicitud->file_name);
     buffer_add_string(buffer, strlen(solicitud->tag_name) + 1, solicitud->tag_name);
     buffer_add_uint32(buffer, solicitud->numero_bloque);
@@ -629,6 +685,7 @@ t_buffer* serializar_solicitud_read(t_sol_read* solicitud) {
 
 t_sol_read* deserializar_solicitud_read(t_buffer* buffer) {
     t_sol_read* solicitud = malloc(sizeof(t_sol_read));
+    solicitud->id_query = buffer_read_uint32(buffer);
     solicitud->file_name = buffer_read_string(buffer);
     solicitud->tag_name = buffer_read_string(buffer);
     solicitud->numero_bloque = buffer_read_uint32(buffer);
@@ -637,7 +694,11 @@ t_sol_read* deserializar_solicitud_read(t_buffer* buffer) {
 }
 
 t_buffer* serializar_bloque_leido(t_bloque_leido* bloque) {
-    t_buffer* buffer = crear_buffer(0);
+    uint32_t size = sizeof(uint32_t) + // id_query
+                    sizeof(uint32_t) + // tamanio
+                    bloque->tamanio;   // contenido
+    t_buffer* buffer = crear_buffer(size);
+    buffer_add_uint32(buffer, bloque->id_query);
     buffer_add_uint32(buffer, bloque->tamanio);
     buffer_add(buffer, bloque->contenido, bloque->tamanio);
     return buffer;
@@ -645,10 +706,40 @@ t_buffer* serializar_bloque_leido(t_bloque_leido* bloque) {
 
 t_bloque_leido* deserializar_bloque_leido(t_buffer* buffer) {
     t_bloque_leido* bloque = malloc(sizeof(t_bloque_leido));
+    bloque->id_query = buffer_read_uint32(buffer);
     bloque->tamanio = buffer_read_uint32(buffer);
     bloque->contenido = malloc(bloque->tamanio);
     buffer_read(buffer, bloque->contenido, bloque->tamanio);
     return bloque;
+}
+
+t_buffer* serializar_solicitud_write(t_sol_write* solicitud) {
+    uint32_t size = sizeof(uint32_t) + // id_query
+                    sizeof(uint32_t) + strlen(solicitud->file_name) + 1 +
+                    sizeof(uint32_t) + strlen(solicitud->tag_name) + 1 +
+                    sizeof(uint32_t) + // numero_bloque
+                    sizeof(uint32_t) + // tamanio
+                    solicitud->tamanio; // contenido
+    t_buffer* buffer = crear_buffer(size);
+    buffer_add_uint32(buffer, solicitud->id_query);
+    buffer_add_string(buffer, strlen(solicitud->file_name) + 1, solicitud->file_name);
+    buffer_add_string(buffer, strlen(solicitud->tag_name) + 1, solicitud->tag_name);
+    buffer_add_uint32(buffer, solicitud->numero_bloque);
+    buffer_add_uint32(buffer, solicitud->tamanio);
+    buffer_add(buffer, solicitud->contenido, solicitud->tamanio);
+    return buffer;
+}
+
+t_sol_write* deserializar_solicitud_write(t_buffer* buffer) {
+    t_sol_write* solicitud = malloc(sizeof(t_sol_write));
+    solicitud->id_query = buffer_read_uint32(buffer);
+    solicitud->file_name = buffer_read_string(buffer);
+    solicitud->tag_name = buffer_read_string(buffer);
+    solicitud->numero_bloque = buffer_read_uint32(buffer);
+    solicitud->tamanio = buffer_read_uint32(buffer);
+    solicitud->contenido = malloc(solicitud->tamanio);
+    buffer_read(buffer, solicitud->contenido, solicitud->tamanio);
+    return solicitud;
 }
 
 t_buffer* serializar_cod_error(t_resultado_ejecucion* resultado) {
