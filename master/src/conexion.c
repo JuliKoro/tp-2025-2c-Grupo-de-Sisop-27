@@ -33,6 +33,7 @@ void* iniciar_receptor(void* socket_servidor) {
                 thread_args = malloc(sizeof(t_thread_args));
                 thread_args->paquete = paquete;
                 thread_args->fd_conexion = fd_conexion_ptr;
+
                 pthread_create(&thread, NULL, atender_query_control, (void*) thread_args);
                 pthread_detach(thread);
                 break;
@@ -68,6 +69,9 @@ void* atender_query_control(void* thread_args) {
     t_query* nuevaQuery = crearNuevaQuery(handshake->archivo_query, 
         handshake->prioridad, *conexion_query_control_ptr);
     queryAReady(nuevaQuery);
+    pthread_t thread;
+    pthread_create(&thread, NULL, aging_de_query, (void*) nuevaQuery);
+    pthread_detach(thread);
     
     // Limpieza de recursos del handshake
     destruir_paquete(paquete_ptr);

@@ -106,6 +106,8 @@ t_worker_interno* obtener_worker_libre();
 
 t_query* obtener_siguiente_query_fifo();
 
+void* aging_de_query(void* query);
+
 // t_query* obtener_siguiente_query_prioridades(); // Para más adelante
 
 #endif

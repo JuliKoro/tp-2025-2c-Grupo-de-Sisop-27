@@ -1,6 +1,9 @@
 #include "m_funciones.h"
 
 
+#include "m_funciones.h"
+
+
 char const* estadosQuery[] = {"Q_READY", "Q_EXEC", "Q_EXIT"};
 
 t_list* listaQueriesReady = NULL;
@@ -182,6 +185,24 @@ t_query* obtener_siguiente_query_fifo() {
     return query;
 }
 
+void* comparar_prioridades(void* query1, void* query2){
+    t_query* queryA = (t_query*) query1;
+    t_query* queryB = (t_query*) query2;
+
+    return queryA->prioridad <= queryB->prioridad ? queryA : queryB;
+}
+
+t_query* obtener_siguiente_query_prioridades() {
+    t_query* query = NULL;
+    pthread_mutex_lock(&mutexListaQueriesReady);
+    // BUSCO EL MENOR NUMERO DE PRIORIDAD
+    if (!list_is_empty(listaQueriesReady)) {
+        query = list_get_minimum(listaQueriesReady, comparar_prioridades);
+    }
+    pthread_mutex_unlock(&mutexListaQueriesReady);
+    return query;
+}
+
 void* iniciar_planificador(void* arg) {
     log_info(logger_master, "Planificador de Corto Plazo iniciado.");
 
@@ -240,5 +261,23 @@ void* iniciar_planificador(void* arg) {
         // Dormimos 100ms o 500ms
         usleep(500000); 
     }
+    return NULL;
+}
+
+void* aging_de_query(void* query){
+    t_query* laQuery = (t_query*) query;
+
+    while(1) {
+        usleep(master_config->tiempo_aging *1000);
+        log_info(logger_master, "La prioridad es de %d", laQuery->prioridad);
+        if(laQuery->estado == Q_READY) {
+            if(laQuery->prioridad > 0) {
+                laQuery->prioridad--;
+                log_info(logger_master, "La prioridad ahora es de %d", laQuery->prioridad);
+            } else {
+                break;
+            }
+        }
+    }    
     return NULL;
 }

@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
 
     while(1) {
         // El main puede seguir ejecutando otras cosas aquí
-        sleep(10); // Simula que el main está haciendo otras tareas
+        sleep(10000); // Simula que el main está haciendo otras tareas
     }
 
     
