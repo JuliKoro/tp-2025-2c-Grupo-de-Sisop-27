@@ -220,17 +220,18 @@ void* iniciar_planificador(void* arg) {
             if (worker_elegido != NULL) {
                 // 3. Obtener la siguiente query según algoritmo (Por ahora FIFO)
                 t_query* query_a_ejecutar = obtener_siguiente_query_fifo();
-
+                log_debug(logger_master, "query obtenida fifo");
+                
                 if (query_a_ejecutar != NULL) {
                     log_info(logger_master, "Asignando Query %d al Worker %d", 
                              query_a_ejecutar->id_query, worker_elegido->id_worker);
 
                     // 4. Mover Query a estado EXEC (Esto la saca de READY y la pone en EXEC)
                     actualizarEstadoQuery(query_a_ejecutar, Q_EXEC);
-
                     // 5. Marcar worker como OCUPADO
                     pthread_mutex_lock(&mutexListaWorkers);
                     worker_elegido->libre = false;
+                    log_debug(logger_master, "worker ocupado");
                     pthread_mutex_unlock(&mutexListaWorkers);
 
                     // 6. Enviar la query al Worker (Serialización y Envío)
@@ -239,6 +240,7 @@ void* iniciar_planificador(void* arg) {
                     asignacion->id_query = query_a_ejecutar->id_query;
                     asignacion->path_query = strdup(query_a_ejecutar->archivoQuery);
                     asignacion->pc = 0; // Inicialmente PC es 0 (luego manejaremos desalojo)
+                    log_debug(logger_master, "Query encontrada en lista READY, removiendo");
 
                     t_paquete* paquete = malloc(sizeof(t_paquete));
                     paquete->codigo_operacion = OP_ASIGNAR_QUERY; // Necesitas definir este OpCode en utils

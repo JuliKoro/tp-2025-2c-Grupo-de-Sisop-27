@@ -46,14 +46,14 @@ int main(int argc, char* argv[]) {
     log_info(logger_master, "Master iniciado correctamente. Esperando conexiones...");
 
     //Tests de manejo de listas
-    log_debug(logger_master, "Duermo 10 segundos para que se conecte un QC y mande una query");
+    /*log_debug(logger_master, "Duermo 10 segundos para que se conecte un QC y mande una query");
     sleep(10); 
     t_query* query1 = list_get(listaQueriesReady, 0);
     if(query1 != NULL) {
         actualizarEstadoQuery(query1, Q_EXEC);
         sleep(5);
         actualizarEstadoQuery(query1, Q_EXIT);
-    }
+    }*/
 
     while(1) {
         // El main puede seguir ejecutando otras cosas aquí
