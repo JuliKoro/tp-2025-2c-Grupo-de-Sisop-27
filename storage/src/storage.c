@@ -2,9 +2,8 @@
 #include <utils/configs.h>
 #include <utils/mensajeria.h>
 #include "conexion.h"
-#include "s_funciones.h"
-#include <commons/string.h>
 #include "operaciones.h"
+#include <commons/string.h>
 
 
 t_log* g_logger_storage = NULL;
@@ -13,32 +12,9 @@ storage_conf* g_storage_config = NULL;
 
 superblock_conf* g_superblock_config = NULL;
 
-void test_truncate() {
-    log_info(g_logger_storage, "=== TEST TRUNCATE ===");
-    char* archivo = "ArchivoTrunc";
-    char* tag = "TagTrunc";
+int g_cantidadWorkers = 0;
 
-    // 1. Crear (Tamaño 0)
-    create(20, archivo, tag);
 
-    // 2. Agrandar a 256 bytes (asumiendo bloque de 128 -> 2 bloques)
-    // Deberían apuntar al bloque 0
-    truncate_file(20, archivo, tag, 256); 
-
-    // Verificación manual (ls -l o leer metadata)
-    // Metadata debería decir BLOCKS=[0,0]
-
-    // 3. Agrandar más (a 384 bytes -> 3 bloques)
-    truncate_file(20, archivo, tag, 384);
-    // Metadata: BLOCKS=[0,0,0]
-
-    // 4. Achicar a 128 bytes (1 bloque)
-    // Debería borrar los ultimos 2 links.
-    truncate_file(20, archivo, tag, 128);
-    // Metadata: BLOCKS=[0]
-    
-    log_info(g_logger_storage, "=== FIN TEST TRUNCATE ===");
-}
 
 int main(int argc, char* argv[]) {
     saludar("storage");
@@ -47,7 +23,7 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Uso: %s <nombre_archivo_configuracion> <nombre_archivo_superblock config>\n", argv[0]);
         return EXIT_FAILURE;
     }
-    inicializarSemaforos();
+    
     char* nombre_archivo_configuracion = argv[1];
     g_storage_config = get_configs_storage(nombre_archivo_configuracion);
     char* path_superblock = string_duplicate(g_storage_config->punto_montaje);
@@ -83,6 +59,7 @@ int main(int argc, char* argv[]) {
     printf("Tamanio de los bloques: %d \n", g_superblock_config->block_size);
     printf("Cantidad de bloques con esta superbock config: %d \n", g_superblock_config->cantidad_bloques);
 
+    inicializarSemaforos();
 
     if(g_storage_config->fresh_start){
         log_debug(g_logger_storage, "Copiando superblock.config a %s", path_superblock);
@@ -93,8 +70,6 @@ int main(int argc, char* argv[]) {
         cargarPuntoMontaje(g_storage_config->punto_montaje);
     }
 
-
-    test_truncate();
 
     while (1) {
         log_info(g_logger_storage, "Iniciando ciclo de espera de clientes");

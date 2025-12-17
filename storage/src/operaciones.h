@@ -43,9 +43,10 @@ int tag(uint32_t query_id,char* nombreFile, char* tagOrigen, char* tagDestino);
  * @param nombreFile Nombre del archivo del cual se leerá el bloque.
  * @param nombreTag Nombre del tag asociado al archivo.
  * @param bloqueLogico Número del bloque lógico a leer.
- * @return Puntero al buffer que contiene los datos leídos, o NULL en caso de error.
+ * @param bufferSalida Doble puntero para almacenar la dirección del buffer con los datos leídos.
+ * @return 0 si la lectura fue exitosa, o codigo de error. 
  */
-void* leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLogico);
+int leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLogico, void** bufferSalida);
 
 /**
  * @brief Libera un bloque físico si ya no está siendo referenciado por ningún archivo lógico.
@@ -88,4 +89,47 @@ char* list_to_string_array(t_list* lista);
  */
 int truncate_file(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t nuevoTamanio);
 
+/** 
+ * @brief Reserva un bloque físico libre en el sistema de almacenamiento.
+ * @param query_id Identificador de la query
+ * @return numero de bloque libre o -1 en caso de error.
+ */
+int reservarBloque();
+
+
+/** 
+ * @brief Escribe datos directamente en un bloque físico específico.
+ * @param bloqueFisico Número del bloque físico donde se escribirán los datos.
+ * @param buffer Puntero al buffer que contiene los datos a escribir.
+ * @param tam_buffer Tamaño del buffer en bytes.
+ * @return 0 si la escritura fue exitosa, -1 en caso de error.
+ */
+int escribirFisicoDirecto(int bloqueFisico, void* buffer, int tam_buffer);
+
+/** 
+ * @brief Escribe datos en un bloque lógico específico de un archivo y tag dados.
+ * @param query_id Identificador de la query
+ * @param nombreFile Nombre del archivo donde se escribirá el bloque.
+ * @param nombreTag Nombre del tag asociado al archivo.
+ * @param bloqueLogico Número del bloque lógico donde se escribirán los datos.
+ * @param datos Puntero al buffer que contiene los datos a escribir.
+ * @return 0 si la escritura fue exitosa, -1 en caso de error.
+ */
+int escribirBloque(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLogico, void* datos);
+
+/** 
+ * @brief Obtiene el hash MD5 del contenido de un bloque físico específico.
+ * @param numeroBloque Número del bloque físico del cual se obtendrá el hash.
+ * @return Cadena que representa el hash MD5 en formato hexadecimal, o NULL en caso de error.
+ */
+char* obtener_hash_bloque(int numeroBloque);
+
+/** 
+ * @brief Realiza un commit de un archivo, marcándolo como COMMITED en su metadata.
+ * @param query_id Identificador de la query
+ * @param nombreFile Nombre del archivo a commitear.
+ * @param nombreTag Nombre del tag asociado al archivo.
+ * @return 0 si el commit fue exitoso, -1 en caso de error.
+ */
+int commitFile(uint32_t query_id, char* nombreFile, char* nombreTag);
 #endif

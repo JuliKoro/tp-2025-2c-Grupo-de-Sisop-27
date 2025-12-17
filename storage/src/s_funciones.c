@@ -8,13 +8,83 @@ t_bitarray* g_bitmap = NULL;
 
 t_config* g_hash_config = NULL;
 
+pthread_mutex_t g_metadata_locks[128];
+
+pthread_mutex_t* g_blocks_mutex = NULL;
+
+pthread_mutex_t g_mutexCantidadWorkers;
+
 
 
 
 void inicializarSemaforos() {
     //Por ahora solo tenemos el mutex del bitmap
+
+    log_debug(g_logger_storage, "Inicializando semaforos...");
     pthread_mutex_init(&g_mutexBitmap, NULL);
     pthread_mutex_init(&g_mutexHashIndex, NULL);
+    pthread_mutex_init(&g_mutexCantidadWorkers, NULL);
+
+    //Inicializamos los mutex para los metadata.config (128 posibles archivos)
+    for(int i = 0; i < 128; i++) {
+        pthread_mutex_init(&g_metadata_locks[i], NULL);
+    }
+
+    if (g_superblock_config == NULL) {
+        log_error(g_logger_storage, "Error CRITICO: Intentando inicializar mutex de bloques sin superblock cargado.");
+        return;
+    }
+
+    int cantidad_bloques = g_superblock_config->cantidad_bloques;
+    
+    // Asignamos memoria exacta para N mutexes
+    g_blocks_mutex = malloc(sizeof(pthread_mutex_t) * cantidad_bloques);
+    
+    if (g_blocks_mutex == NULL) {
+        log_error(g_logger_storage, "Error: No se pudo reservar memoria para mutex de bloques.");
+        return;
+    }
+
+    // Inicializamos uno por uno
+    for (int i = 0; i < cantidad_bloques; i++) {
+        pthread_mutex_init(&g_blocks_mutex[i], NULL);
+    }
+    
+    log_debug(g_logger_storage, "Semaforos inicializados. Mutex de bloques creados: %d", cantidad_bloques);
+}
+
+void destruirSemaforos() {
+    pthread_mutex_destroy(&g_mutexBitmap);
+    pthread_mutex_destroy(&g_mutexHashIndex);
+    pthread_mutex_destroy(&g_mutexCantidadWorkers);
+
+    for(int i = 0; i < 128; i++) {
+        pthread_mutex_destroy(&g_metadata_locks[i]);
+    }
+
+    if (g_blocks_mutex != NULL) {
+        for (int i = 0; i < g_superblock_config->cantidad_bloques; i++) {
+            pthread_mutex_destroy(&g_blocks_mutex[i]);
+        }
+        free(g_blocks_mutex); // Liberar el malloc
+        g_blocks_mutex = NULL;
+    }
+}
+
+int hash_str(char* str) {
+    int sum = 0;
+    while (*str) sum += *str++;
+    return sum;
+}
+
+void lock_file_metadata(char* nombreFile) {
+    int index = hash_str(nombreFile) % 128;
+    pthread_mutex_lock(&g_metadata_locks[index]);
+}
+
+void unlock_file_metadata(char* nombreFile) {
+    int index = hash_str(nombreFile) % 128;
+    pthread_mutex_unlock(&g_metadata_locks[index]);
 }
 
 void mostrarBitmap(){
@@ -160,7 +230,7 @@ void escribirMetadataConfig(char* path, int tamanio, int* blocks, int cantidadBl
     
 }
 
-void escribirBloque(int numeroBloque, void* datos, size_t tamanioDatos){
+void escribirDatosBloque(int numeroBloque, void* datos, size_t tamanioDatos){
     char* pathBloque = string_from_format("%s/physical_blocks/block%04d.dat", g_storage_config->punto_montaje, numeroBloque);
 
     log_debug(g_logger_storage, "Escribiendo en el bloque %d en %s", numeroBloque, pathBloque);
@@ -444,7 +514,7 @@ void inicializarPuntoMontaje(char* path){
     size_t tamanioBloque = g_superblock_config->block_size;
     void* bufferCeros = malloc(tamanioBloque);
     memset(bufferCeros, 0, tamanioBloque);
-    escribirBloque(0, bufferCeros, tamanioBloque);
+    escribirDatosBloque(0, bufferCeros, tamanioBloque);
     free(bufferCeros);
 
     //Inicializamos el bitmap

@@ -14,12 +14,15 @@
 #include <pthread.h>
 #include <sys/mman.h>
 #include <commons/crypto.h>
+#include <utils/estructuras.h>
 
 extern t_log* g_logger_storage;
 
 extern storage_conf* g_storage_config;
 
 extern superblock_conf* g_superblock_config;
+
+extern int g_cantidadWorkers;
 
 extern t_bitarray* g_bitmap;
 
@@ -28,10 +31,43 @@ extern t_config* g_hash_config;
 extern pthread_mutex_t g_mutexBitmap;
 
 extern pthread_mutex_t g_mutexHashIndex;
+
+extern pthread_mutex_t g_metadata_locks[128];
+
+extern pthread_mutex_t* g_blocks_mutex;
+
+extern pthread_mutex_t g_mutexCantidadWorkers;
+
+
 /**
- * @brief Inicializa los semaforos usados en storage, por ahora solo el de bitmap
+ * @brief Inicializa los semaforos usados en storage
  */
 void inicializarSemaforos();
+
+/**
+ * @brief Destruye los semaforos usados en storage
+ */
+void destruirSemaforos();
+
+/**
+ * @brief Función hash simple para strings
+ * @param str el string a hashear
+ * @return el valor hash como entero
+ */
+int hash_str(char* str);
+
+
+/**
+ * @brief Bloquea el mutex correspondiente al metadata.config del file especificado
+ * @param nombreFile el nombre del file cuyo metadata se quiere bloquear
+ */
+void lock_file_metadata(char* nombreFile);
+
+/**
+ * @brief Desbloquea el mutex correspondiente al metadata.config del file especificado
+ * @param nombreFile el nombre del file cuyo metadata se quiere desbloquear
+ */
+void unlock_file_metadata(char* nombreFile);
 
 /**
  * @brief Muestra el bitmap actual en el log, en modo debug
@@ -77,7 +113,7 @@ void escribirMetadataConfig(char* path, int tamanio, int* blocks, int cantidadBl
  * @param tamanioDatos el tamanio de los datos a escribir
  * @return void
  */
-void escribirBloque(int numeroBloque, void* datos, size_t tamanioDatos);
+void escribirDatosBloque(int numeroBloque, void* datos, size_t tamanioDatos);
 
 /**
  * @brief Inicializa el t_bitarray, creando el archivo bitmap.bin en la ruta especificada y mapeandolo a memoria.
