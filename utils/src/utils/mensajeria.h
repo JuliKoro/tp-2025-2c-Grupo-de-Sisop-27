@@ -270,18 +270,18 @@ t_tam_pagina* deserializar_tam_pagina(t_buffer* buffer);
 
 /**
  * @brief Serializa un t_resultado_query
- * @param resultado el *t_resultado_query a serializar
+ * @param resultado el *t_fin_query a serializar
  * @return el *t_buffer resultante
  */
-t_buffer* serializar_resultado_query(t_resultado_query* resultado);
+t_buffer* serializar_resultado_query(t_fin_query* resultado);
 
 /**
  * @brief Deserializa un t_resultado_query
  * @param buffer el *t_buffer a deserializar
- * @return el *t_resultado_query resultante. 
+ * @return el *t_fin_query resultante. 
  * @note La estructura debe ser liberada por el que la recibe
  */
-t_resultado_query* deserializar_resultado_query(t_buffer* buffer);
+t_fin_query* deserializar_resultado_query(t_buffer* buffer);
 
 /**
  * @brief Serializa un código de error (t_resultado_ejecucion)
@@ -488,6 +488,13 @@ t_buffer* serializar_lectura(t_msj_leido* info_leida);
  * @note Recibido en Master -> Query Control (OP_READ)
  */
 t_msj_leido* deserializar_lectura(t_buffer* buffer);
+
+/**
+ * @brief Obtiene el mensaje asociado a un código de resultado de ejecución
+ * @param estado el código de resultado de ejecución
+ * @return el mensaje asociado
+ */
+char* obtener_mensaje_resultado(t_resultado_ejecucion estado);
 
 #endif
  

@@ -445,40 +445,24 @@ t_tam_pagina* deserializar_tam_pagina(t_buffer* buffer) {
     return tam_pagina_struct;
 }
 
-t_buffer* serializar_resultado_query(t_resultado_query* resultado) {
-    uint32_t tamanio_buffer = sizeof(uint32_t) + sizeof(t_resultado_ejecucion) + sizeof(uint32_t);
-    if (resultado->mensaje_error != NULL) {
-        tamanio_buffer += sizeof(uint32_t) + strlen(resultado->mensaje_error);
-    } else {
-        tamanio_buffer += sizeof(uint32_t); // Longitud 0 para mensaje_error
-    }
+t_buffer* serializar_resultado_query(t_fin_query* resultado) {
+    uint32_t tamanio_buffer = sizeof(uint32_t) + // id_query
+                              sizeof(t_resultado_ejecucion) + // estado
+                              sizeof(uint32_t); // pc_final
 
     t_buffer* buffer = crear_buffer(tamanio_buffer);
     buffer_add_uint32(buffer, resultado->id_query);
     buffer_add_uint32(buffer, (uint32_t)resultado->estado);
     buffer_add_uint32(buffer, resultado->pc_final);
 
-    if (resultado->mensaje_error != NULL) {
-        buffer_add_string(buffer, strlen(resultado->mensaje_error), resultado->mensaje_error);
-    } else {
-        buffer_add_uint32(buffer, 0); // Longitud 0 para mensaje_error
-    }
-
     return buffer;
 }
 
-t_resultado_query* deserializar_resultado_query(t_buffer* buffer) {
-    t_resultado_query* resultado = malloc(sizeof(t_resultado_query));
+t_fin_query* deserializar_resultado_query(t_buffer* buffer) {
+    t_fin_query* resultado = malloc(sizeof(t_fin_query));
     resultado->id_query = buffer_read_uint32(buffer);
     resultado->estado = (t_resultado_ejecucion)buffer_read_uint32(buffer);
     resultado->pc_final = buffer_read_uint32(buffer);
-
-    uint32_t longitud_mensaje = buffer_read_uint32(buffer);
-    if (longitud_mensaje > 0) {
-        resultado->mensaje_error = buffer_read_string(buffer);
-    } else {
-        resultado->mensaje_error = NULL;
-    }
 
     return resultado;
 }
@@ -781,4 +765,39 @@ t_msj_leido* deserializar_lectura(t_buffer* buffer) {
     info_leida->tag_name = buffer_read_string(buffer);
     info_leida->lectura = buffer_read_string(buffer);
     return info_leida;
+}
+
+/***********************************************************************************************************************/
+/***                                           FUNCIONES AUXILIARES                                ***/
+/***********************************************************************************************************************/
+
+char* obtener_mensaje_resultado(t_resultado_ejecucion estado) {
+    switch (estado) {
+        case EXEC_OK:
+            return strdup("Ejecución de la ultima instruccion exitosa");
+        case EXEC_FIN_QUERY:
+            return strdup("Ejecución finalizada correctamente");
+        case EXEC_DESALOJO:
+            return strdup("Query desalojada por pedido del Master");
+        case ERROR_FILE_NO_EXISTE:
+            return strdup("Error: El archivo no existe en Storage");
+        case ERROR_YA_EXISTE:
+            return strdup("Error: El archivo ya existe en Storage");
+        case ERROR_ESPACIO_INSUFICIENTE:
+            return strdup("Error: Espacio insuficiente en Storage");
+        case ERROR_ESCRITURA_NO_PERMITIDA:
+            return strdup("Error: Escritura no permitida en Storage");
+        case ERROR_FUERA_DE_LIMITE:
+            return strdup("Error: Dirección fuera de límite en Storage");
+        case ERROR_CONEXION:
+            return strdup("Error de conexión con Storage");
+        case EXEC_ERROR:
+            return strdup("Error ocurrido durante la ejecución de la query en Worker");
+        case ERROR_TAMANIO_INVALIDO:
+            return strdup("Error: Tamaño inválido especificado");
+        case ERROR_MEMORIA_INTERNA:
+            return strdup("Error: Problema con la memoria interna del Worker");
+        default:
+            return strdup("Error desconocido");
+    }
 }

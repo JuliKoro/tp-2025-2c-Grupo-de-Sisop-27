@@ -134,7 +134,7 @@ void* hilo_master(void* arg){
                 free(query_asignada);
                 break;
 
-            case OP_flag_desalojo_query: // Cuando Master ordean desalojar la Query actual al Worker
+            case OP_DESALOJO_QUERY: // Cuando Master ordean desalojar la Query actual al Worker
                 log_debug(logger_worker, "Solicitud de flag_desalojo_query recibida.");
 
                 pthread_mutex_lock(&mutex_registros);

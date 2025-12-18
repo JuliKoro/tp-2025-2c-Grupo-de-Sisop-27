@@ -6,7 +6,15 @@
 #include <utils/mensajeria.h>
 #include<utils/loggeo.h>
 
+/**
+ * @brief Logger del módulo Query Control
+ */
 extern t_log* logger_qc;
+
+/**
+ * @brief Configuración del módulo Query Control
+ */
+extern query_control_conf* qc_configs;
 
 /**
 * @brief Genera un handshake entre query control y master
@@ -15,7 +23,6 @@ extern t_log* logger_qc;
 * @return el *t_handshake_qc_master resultante
 */
 t_handshake_qc_master* generarHandshake(char* archivo_configuracion, int prioridad);
-
 
 /**
 * @brief Genera un paquete con el handshake entre query control y master
@@ -37,5 +44,13 @@ bool confirmarRecepcion (int conexion_master);
 * @return void
 */
 void limpiarMemoria(t_handshake_qc_master*);
+
+/**
+ * @brief Establece la conexión entre el Query Control y el Master
+ * @param nombre_qc El nombre del archivo de query a ejecutar
+ * @param prioridad La prioridad de la query
+ * @return El descriptor de la conexión con el Master, o EXIT_FAILURE en caso de error
+ */
+int conexion_qc(char* nombre_qc, int prioridad);
 
 #endif

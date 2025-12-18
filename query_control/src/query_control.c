@@ -49,24 +49,29 @@ int main(int argc, char* argv[]) {
                 free(info_leida->tag_name);
                 free(info_leida->lectura);
                 break;
-                
+
             case OP_RESULTADO_QUERY: // Resultado de la Query
-                t_resultado_query* resultado = deserializar_resultado_query(paquete->datos);
-                if(resultado->estado >= 0) {
-                    log_info(logger_qc, "## Query %d finalizada correctamente en PC: %d", 
-                             resultado->id_query, resultado->pc_final);
+                t_fin_query* resultado_query = deserializar_resultado_query(paquete->datos);
+                
+                if (resultado_query->estado < 0) {
+                    log_error(logger_qc, "Query abortada - Cod. Error: %d - %s",
+                             resultado_query->estado,
+                             obtener_mensaje_resultado(resultado_query->estado));
                 } else {
-                    log_warning(logger_qc, "## Query %d abortada en PC: %d. Cod. Error: %d - %s", 
-                                resultado->id_query, resultado->pc_final, resultado->estado, 
-                                resultado->mensaje_error);
+                    log_debug(logger_qc, "Query finalizada correctamente.");
                 }
-                // TODO: Liberar resultado
-                if(resultado->mensaje_error) free(resultado->mensaje_error);
+
+                // Log Obligatorio - Finalizacion de la Query
+                log_info(logger_qc, "## Query Finalizada - %s",
+                         obtener_mensaje_resultado(resultado_query->estado));
+                free(resultado_query);
                 break;
+
             default:
                 log_warning(logger_qc, "Operación desconocida recibida del Master: %d", paquete->codigo_operacion);
                 break;
         }
+        destruir_paquete(paquete);
     }
 
     return 0;
@@ -87,47 +92,4 @@ int inicializar_qc(char* nombre_config, char* archivo_query, int prioridad) {
     log_debug(logger_qc, "Iniciado Query Control para la query: %s con prioridad %d", archivo_query, prioridad);
 
     return 0;
-}
-
-int conexion_qc(char* nombre_qc, int prioridad) {
-    char puerto_master[10];
-    sprintf(puerto_master, "%d", qc_configs->puerto_master);
-
-    int conexion_master = crear_conexion(qc_configs->ip_master, puerto_master);
-    if(conexion_master == -1){
-        log_error(logger_qc, "Error al conectar con el master");
-        log_warning(logger_qc, "Abortando Query Control");
-        return EXIT_FAILURE;
-    }
-
-    // Log Obligatorio - Conexión al master
-    log_info(logger_qc, "## Conexión al Master exitosa. IP: %s, Puerto: %s", 
-             qc_configs->ip_master, puerto_master);
-
-    // HANDSHAKE CON MASTER (archivo_query, prioridad)
-    t_handshake_qc_master* handshake = generarHandshake(nombre_qc, prioridad);
-
-    t_paquete* paquete = generarPaquete(handshake);
-
-    // Envio de Query
-    if(!enviar_paquete(conexion_master, paquete)) {
-        log_error(logger_qc, "Error al enviar el handshake al Master");
-        log_warning(logger_qc, "Abortando Query Control");
-        limpiarMemoria(handshake);
-        return EXIT_FAILURE;
-    }
-
-    if(!confirmarRecepcion(conexion_master)) {
-        log_error(logger_qc, "Error al confirmar el handshake con el Master");
-        log_warning(logger_qc, "Abortando Query Control");
-        limpiarMemoria(handshake);
-        return EXIT_FAILURE;
-    }
-
-    // Log Obligatorio - Envío de Query
-    log_info(logger_qc, "## Solicitud de ejecución de Query: %s, prioridad: %d", 
-             nombre_qc, prioridad);
-    
-    limpiarMemoria(handshake);
-    return conexion_master;
 }

@@ -50,7 +50,7 @@ void inicializar_worker(char* nombre_config, char* id_worker_str);
  * 
  * Este hilo se ejecuta continuamente esperando mensajes del Master, que pueden ser:
  * - OP_ASIGNAR_QUERY: Asigna una nueva query para ejecutar
- * - OP_flag_desalojo_query: Solicita desalojar la query actual
+ * - OP_DESALOJO_QUERY: Solicita desalojar la query actual
  * - OP_FIN_QUERY: Notifica la finalización de una query
  * 
  * El hilo actualiza el estado del Worker (PC, path de query, flags) según

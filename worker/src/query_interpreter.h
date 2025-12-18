@@ -241,13 +241,6 @@ t_resultado_ejecucion recibir_respuesta_storage();
 bool notificar_resultado_a_master(t_resultado_ejecucion estado);
 
 /**
- * @brief Obtiene el mensaje de error correspondiente a un estado
- * @param estado Estado de resultado de ejecución
- * @return String con el mensaje de error (debe ser liberado por el llamador)
- */
-char* obtener_mensaje_error(t_resultado_ejecucion estado);
-
-/**
  * @brief Separa un string "FILE:TAG" en sus componentes
  * @param file_tag String en formato "FILE:TAG"
  * @param file_name Puntero donde guardar el nombre del File

@@ -13,21 +13,16 @@
 #ifndef QC_H_
 #define QC_H_
 
-#include <utils/hello.h>
-#include <utils/configs.h>
-#include <utils/mensajeria.h>
-
 #include "qc_funciones.h"
 
 /**
- * @brief Logger del módulo Query Control
+ * @brief Inicializa el módulo Query Control
+ * 
+ * @param nombre_config Nombre del archivo de configuración
+ * @param archivo_query Nombre del archivo de query a ejecutar
+ * @param prioridad Prioridad de la query
+ * @return EXIT_SUCCESS si la inicialización fue exitosa, EXIT_FAILURE en caso contrario
  */
-extern t_log* logger_qc;
-
-/**
- * @brief Configuración del módulo Query Control
- */
-extern query_control_conf* qc_configs;
-
+int inicializar_qc(char* nombre_config, char* archivo_query, int prioridad);
 
 #endif /* QC_H_ */

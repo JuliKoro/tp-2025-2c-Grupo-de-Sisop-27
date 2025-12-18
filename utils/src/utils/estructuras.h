@@ -18,7 +18,7 @@ typedef enum {
     HANDSHAKE_WORKER_STORAGE,
     HANDSHAKE_WORKER_MASTER,
     OP_ASIGNAR_QUERY, // Asignación de nueva Query
-    OP_flag_desalojo_query, // Solicitud de desalojo
+    OP_DESALOJO_QUERY, // Solicitud de desalojo
     OP_FIN_QUERY, // Notificación de fin de Query
     OP_INST_OK, // Notificación de éxito
     OP_ERROR, // Notificación de error
@@ -148,15 +148,13 @@ typedef struct {
  * @param id_query el ID de la query ejecutada - uint32_t
  * @param estado el estado final de la query - t_resultado_ejecucion
  * @param pc_final el valor del program counter donde terminó la ejecución - uint32_t
- * @param mensaje_error mensaje descriptivo del error (NULL si no hubo error) - char
  * @note Enviada desde Worker → Master → Query Control
  */
 typedef struct {
     uint32_t id_query;                    // ID de la query ejecutada
     t_resultado_ejecucion estado;         // Estado final (EXEC_OK, EXEC_ERROR, etc.)
     uint32_t pc_final;                    // PC donde terminó (útil para desalojos)
-    char* mensaje_error;                  // Mensaje descriptivo del error (NULL si OK)
-} t_resultado_query;
+} t_fin_query;
 
 // ============================================================================
 // TIPOS DE INSTRUCCIONES

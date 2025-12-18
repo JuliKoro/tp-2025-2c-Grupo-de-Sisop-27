@@ -1,7 +1,5 @@
 #include "qc_funciones.h"
-#include <utils/hello.h>
-#include <utils/configs.h>
-#include <utils/mensajeria.h>
+
 
 t_handshake_qc_master* generarHandshake(char* archivo_query, int prioridad) {
     t_handshake_qc_master* handshake = malloc(sizeof(*handshake));
@@ -31,4 +29,47 @@ bool confirmarRecepcion (int conexion_master) {
 void limpiarMemoria(t_handshake_qc_master* handshake) {
     free(handshake->archivo_query);
     free(handshake);
+}
+
+int conexion_qc(char* nombre_qc, int prioridad) {
+    char puerto_master[10];
+    sprintf(puerto_master, "%d", qc_configs->puerto_master);
+
+    int conexion_master = crear_conexion(qc_configs->ip_master, puerto_master);
+    if(conexion_master == -1){
+        log_error(logger_qc, "Error al conectar con el master");
+        log_warning(logger_qc, "Abortando Query Control");
+        return EXIT_FAILURE;
+    }
+
+    // Log Obligatorio - Conexión al master
+    log_info(logger_qc, "## Conexión al Master exitosa. IP: %s, Puerto: %s", 
+             qc_configs->ip_master, puerto_master);
+
+    // HANDSHAKE CON MASTER (archivo_query, prioridad)
+    t_handshake_qc_master* handshake = generarHandshake(nombre_qc, prioridad);
+
+    t_paquete* paquete = generarPaquete(handshake);
+
+    // Envio de Query
+    if(!enviar_paquete(conexion_master, paquete)) {
+        log_error(logger_qc, "Error al enviar el handshake al Master");
+        log_warning(logger_qc, "Abortando Query Control");
+        limpiarMemoria(handshake);
+        return EXIT_FAILURE;
+    }
+
+    if(!confirmarRecepcion(conexion_master)) {
+        log_error(logger_qc, "Error al confirmar el handshake con el Master");
+        log_warning(logger_qc, "Abortando Query Control");
+        limpiarMemoria(handshake);
+        return EXIT_FAILURE;
+    }
+
+    // Log Obligatorio - Envío de Query
+    log_info(logger_qc, "## Solicitud de ejecución de Query: %s, prioridad: %d", 
+             nombre_qc, prioridad);
+    
+    limpiarMemoria(handshake);
+    return conexion_master;
 }
