@@ -58,6 +58,7 @@ typedef struct {
     int socket_fd;
     uint32_t id_worker;
     bool libre; // true = LIBRE, false = OCUPADO
+    t_query* query;
 } t_worker_interno;
 
 

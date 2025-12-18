@@ -156,11 +156,11 @@ t_worker_interno* obtener_worker_libre() {
     t_worker_interno* worker_encontrado = NULL;
     
     pthread_mutex_lock(&mutexListaWorkers);
-    
+    //cambiomechi
     // Iteramos la lista buscando el primer worker con libre == true
     for (int i = 0; i < list_size(listaWorkers); i++) {
         t_worker_interno* worker = list_get(listaWorkers, i);
-        if (worker->libre) {
+        if (worker->query == NULL) {
             worker_encontrado = worker;
             break; 
         }
