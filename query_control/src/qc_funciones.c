@@ -24,6 +24,7 @@ bool confirmarRecepcion (int conexion_master) {
         return false;
     }
     printf("Confirmacion de recepecion: %s\n", confirmacion);
+    free(confirmacion);
     return true;
 }
 

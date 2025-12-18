@@ -221,9 +221,11 @@ bool enviar_instruccion(e_codigo_operacion cod_op, void* estructura_inst);
  * @brief Envía el contenido leído (READ) al Master
  * @param info Puntero al contenido leído
  * @param size_info Tamaño del contenido
+ * @param file_name Nombre del archivo
+ * @param tag_name Nombre del tag
  * @return true si se envió correctamente
  */
-bool enviar_info_a_master(char* info, uint32_t size_info);
+bool enviar_info_a_master(char* info, uint32_t size_info, char* file_name, char* tag_name);
 
 /**
  * @brief Recibe la respuesta del Storage tras ejecutar una instrucción

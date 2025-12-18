@@ -514,6 +514,8 @@ t_resultado_ejecucion recibir_bloque_storage(void* bloque) {
     if (bloque_leido->tamanio > worker_configs->tam_pagina) {
         log_error(logger_worker, "Tamaño de bloque recibido excede el tamaño de página esperado");
         // Liberar recursos
+        free(bloque_leido->file_name);
+        free(bloque_leido->tag_name);
         free(bloque_leido->contenido);
         free(bloque_leido);
         destruir_paquete(paquete_recibido);
@@ -522,6 +524,8 @@ t_resultado_ejecucion recibir_bloque_storage(void* bloque) {
     
     memcpy(bloque, bloque_leido->contenido, bloque_leido->tamanio); // Copiar contenido al bloque proporcionado
 
+    free(bloque_leido->file_name);
+    free(bloque_leido->tag_name);
     free(bloque_leido->contenido);
     free(bloque_leido);
     destruir_paquete(paquete_recibido);

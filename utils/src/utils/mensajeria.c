@@ -695,10 +695,14 @@ t_sol_read* deserializar_solicitud_read(t_buffer* buffer) {
 
 t_buffer* serializar_bloque_leido(t_bloque_leido* bloque) {
     uint32_t size = sizeof(uint32_t) + // id_query
+                    sizeof(uint32_t) + strlen(bloque->file_name) + 1 + // file_name
+                    sizeof(uint32_t) + strlen(bloque->tag_name) + 1 + // tag_name
                     sizeof(uint32_t) + // tamanio
                     bloque->tamanio;   // contenido
     t_buffer* buffer = crear_buffer(size);
     buffer_add_uint32(buffer, bloque->id_query);
+    buffer_add_string(buffer, strlen(bloque->file_name) + 1, bloque->file_name);
+    buffer_add_string(buffer, strlen(bloque->tag_name) + 1, bloque->tag_name);
     buffer_add_uint32(buffer, bloque->tamanio);
     buffer_add(buffer, bloque->contenido, bloque->tamanio);
     return buffer;
@@ -707,6 +711,8 @@ t_buffer* serializar_bloque_leido(t_bloque_leido* bloque) {
 t_bloque_leido* deserializar_bloque_leido(t_buffer* buffer) {
     t_bloque_leido* bloque = malloc(sizeof(t_bloque_leido));
     bloque->id_query = buffer_read_uint32(buffer);
+    bloque->file_name = buffer_read_string(buffer);
+    bloque->tag_name = buffer_read_string(buffer);
     bloque->tamanio = buffer_read_uint32(buffer);
     bloque->contenido = malloc(bloque->tamanio);
     buffer_read(buffer, bloque->contenido, bloque->tamanio);

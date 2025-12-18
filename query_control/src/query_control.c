@@ -14,13 +14,14 @@ int main(int argc, char* argv[]) {
     char* nombre_archivo_query = argv[2];
     int prioridad = atoi(argv[3]);
 
+    // INICIALIZACION DEL QUERY CONTROL
     if(inicializar_qc(nombre_archivo_configuracion, nombre_archivo_query, prioridad) == EXIT_FAILURE){
         log_error(logger_qc, "Error al inicializar el Query Control");
         log_warning(logger_qc, "Abortando Query Control");
         return EXIT_FAILURE;
     }
 
-    // Conectar Master
+    // CONEXION CON MASTER
     int conexion_master = conexion_qc(nombre_archivo_query, prioridad);
     if(conexion_master == EXIT_FAILURE){
         log_error(logger_qc, "Error al conectar con el Master");
@@ -28,6 +29,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
     
+    // ESCUCHA DE MENSAJES DEL MASTER
     while(1) {
         // Mantener la conexión abierta para detectar desconexiones y recibir mensajes
         t_paquete* paquete = recibir_paquete(conexion_master);
@@ -35,8 +37,20 @@ int main(int argc, char* argv[]) {
             log_info(logger_qc, "El Master se ha desconectado.");
             break;
         }
+
+        switch(paquete->codigo_operacion) {
+            case MSJ_READ:
+                t_bloque_leido* bloque = deserializar_bloque_leido(paquete->datos);
+                // Procesar el bloque leído (por ejemplo, imprimir su contenido)
+                log_info(logger_qc, "## Lectura realizada: File %s:%s, contenido: <CONTENIDO>",
+                         bloque->file_name, bloque->tag_name);
+                
+                break;
+            default:
+                log_warning(logger_qc, "Operación desconocida recibida del Master: %d", paquete->codigo_operacion);
+                break;
+        }
     }
-    //limpiarMemoria(handshake);
 
     return 0;
 }
@@ -69,10 +83,16 @@ int conexion_qc(char* nombre_qc, int prioridad) {
         return EXIT_FAILURE;
     }
 
+    // Log Obligatorio - Conexión al master
+    log_info(logger_qc, "## Conexión al Master exitosa. IP: %s, Puerto: %s", 
+             qc_configs->ip_master, puerto_master);
+
+    // HANDSHAKE CON MASTER (archivo_query, prioridad)
     t_handshake_qc_master* handshake = generarHandshake(nombre_qc, prioridad);
 
     t_paquete* paquete = generarPaquete(handshake);
 
+    // Envio de Query
     if(!enviar_paquete(conexion_master, paquete)) {
         log_error(logger_qc, "Error al enviar el handshake al Master");
         log_warning(logger_qc, "Abortando Query Control");
@@ -87,5 +107,10 @@ int conexion_qc(char* nombre_qc, int prioridad) {
         return EXIT_FAILURE;
     }
 
+    // Log Obligatorio - Envío de Query
+    log_info(logger_qc, "## Solicitud de ejecución de Query: %s, prioridad: %d", 
+             nombre_qc, prioridad);
+    
+    limpiarMemoria(handshake);
     return conexion_master;
 }

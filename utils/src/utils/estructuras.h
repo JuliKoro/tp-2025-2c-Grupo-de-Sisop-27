@@ -30,7 +30,8 @@ typedef enum {
     OP_FLUSH,
     OP_DELETE,
     OP_END,
-    OP_RESULTADO_QUERY
+    OP_RESULTADO_QUERY,
+    MSJ_READ // Mensaje de respuesta de lectura al Master - QC
 } e_codigo_operacion;
 
 /**
@@ -71,7 +72,7 @@ typedef struct {
 
 /**
 * @brief Estructura para el handshake entre query control y master
-* @param archivo_configuracion el nombre del archivo de configuracion - char*
+* @param archivo_query el nombre del archivo de la query - char*
 * @param prioridad la prioridad de la query - int
 */
 typedef struct {
@@ -261,11 +262,16 @@ typedef struct {
 // Estructura para la respuesta de lectura de Storage
 /**
  * @brief Estructura para la respuesta de lectura de Storage
+ * @param id_query el ID de la query - uint32_t
+ * @param file_name el nombre del archivo - char*
+ * @param tag_name el nombre del tag - char*
  * @param contenido el contenido leído - void*
  * @param tamanio el tamaño del contenido leído - uint32_t
  */
 typedef struct {
     uint32_t id_query;
+    char* file_name;
+    char* tag_name;
     void* contenido;
     uint32_t tamanio;
 } t_bloque_leido;
