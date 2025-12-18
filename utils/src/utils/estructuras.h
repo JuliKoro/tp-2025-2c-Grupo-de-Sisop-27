@@ -24,14 +24,13 @@ typedef enum {
     OP_CREATE,
     OP_TRUNCATE,
     OP_WRITE,
-    OP_READ, // Tanto como para solicitud como para respuesta
+    OP_READ, // Tanto como para solicitud (W -> S) como para respuesta (S -> W), y para mensaje leído (W -> M & M -> QC)
     OP_TAG,
     OP_COMMIT,
     OP_FLUSH,
     OP_DELETE,
     OP_END,
-    OP_RESULTADO_QUERY,
-    MSJ_READ // Mensaje de respuesta de lectura al Master - QC
+    OP_RESULTADO_QUERY, // Notificación de resultado de Query (Worker -> Master -> QC)
 } e_codigo_operacion;
 
 /**
@@ -267,6 +266,9 @@ typedef struct {
  * @param tag_name el nombre del tag - char*
  * @param contenido el contenido leído - void*
  * @param tamanio el tamaño del contenido leído - uint32_t
+ * 
+ * @note Utilizado para la respuesta de una solicitud de lectura (Storage -> Worker),
+ * envio de mensaje leido (Worker -> Master & Master -> Query Control)
  */
 typedef struct {
     uint32_t id_query;

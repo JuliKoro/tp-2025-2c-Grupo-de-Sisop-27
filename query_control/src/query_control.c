@@ -39,12 +39,29 @@ int main(int argc, char* argv[]) {
         }
 
         switch(paquete->codigo_operacion) {
-            case MSJ_READ:
+            case OP_READ: // Mensaje leido/operacion READ (Worker -> Master & Master -> QC)
                 t_bloque_leido* bloque = deserializar_bloque_leido(paquete->datos);
-                // Procesar el bloque leído (por ejemplo, imprimir su contenido)
-                log_info(logger_qc, "## Lectura realizada: File %s:%s, contenido: <CONTENIDO>",
-                         bloque->file_name, bloque->tag_name);
                 
+                // TODO Convertir el contenido a string para imprimir (asumiendo que es texto)
+                // Procesar el bloque leído (por ejemplo, imprimir su contenido)
+                log_info(logger_qc, "## Lectura realizada: File %s:%s, contenido: %s",
+                         bloque->file_name, bloque->tag_name, bloque->contenido);
+
+                // TODO: Liberar bloque leído
+                free(bloque->file_name);
+                break;
+            case OP_RESULTADO_QUERY: // Resultado de la Query
+                t_resultado_query* resultado = deserializar_resultado_query(paquete->datos);
+                if(resultado->estado >= 0) {
+                    log_info(logger_qc, "## Query %d finalizada correctamente en PC: %d", 
+                             resultado->id_query, resultado->pc_final);
+                } else {
+                    log_warning(logger_qc, "## Query %d abortada en PC: %d. Cod. Error: %d - %s", 
+                                resultado->id_query, resultado->pc_final, resultado->estado, 
+                                resultado->mensaje_error);
+                }
+                // TODO: Liberar resultado
+                if(resultado->mensaje_error) free(resultado->mensaje_error);
                 break;
             default:
                 log_warning(logger_qc, "Operación desconocida recibida del Master: %d", paquete->codigo_operacion);

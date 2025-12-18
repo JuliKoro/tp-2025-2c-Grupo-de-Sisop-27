@@ -541,7 +541,7 @@ bool enviar_info_a_master(char* info, uint32_t size_info, char* file_name, char*
     bloque->contenido = info;
 
     t_buffer* buffer = serializar_bloque_leido(bloque);
-    t_paquete* paquete = empaquetar_buffer(MSJ_READ, buffer);
+    t_paquete* paquete = empaquetar_buffer(OP_READ, buffer);
 
     if (enviar_paquete(conexion_master, paquete) == -1) {
         log_error(logger_worker, "Error al enviar información al Master");
