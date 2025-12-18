@@ -17,14 +17,14 @@ t_paquete* generarPaquete (t_handshake_qc_master* handshake) {
     return paquete;
 }
 
-void confirmarRecepcion (int conexion_master) {
+bool confirmarRecepcion (int conexion_master) {
     char* confirmacion = recibir_string(conexion_master);
     if(confirmacion == NULL){
         fprintf(stderr, "Error al recibir confirmacion de recepecion\n");
-        return;
+        return false;
     }
     printf("Confirmacion de recepecion: %s\n", confirmacion);
-    return;
+    return true;
 }
 
 void limpiarMemoria(t_handshake_qc_master* handshake) {

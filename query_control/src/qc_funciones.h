@@ -27,9 +27,9 @@ t_paquete* generarPaquete(t_handshake_qc_master*);
 /**
 * @brief Confirma la recepcion del handshake entre query control y master
 * @param conexion_master la conexion con el master
-* @return void
+* @return bool que indica si la confirmacion fue exitosa
 */
-void confirmarRecepcion (int conexion_master);
+bool confirmarRecepcion (int conexion_master);
 
 /**
 * @brief Libera la memoria de la confirmacion y el handshake
