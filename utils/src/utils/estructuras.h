@@ -10,6 +10,7 @@
 /** 
 * @brief Codigos de operacion 
 * @param HANDSHAKE_QC_MASTER - Handshake entre query control y master
+* @param HANDSHAKE_WORKER_STORAGE - Handshake entre worker y storage 
 * 
 */
 typedef enum {
@@ -24,7 +25,7 @@ typedef enum {
     OP_CREATE,
     OP_TRUNCATE,
     OP_WRITE,
-    OP_READ, // Tanto como para solicitud (W -> S) como para respuesta (S -> W), y para mensaje leído (W -> M & M -> QC)
+    OP_READ, // t_sol_read (W -> S), t_bloque_leido (S -> W), t_msj_leido (W -> M -> QC)
     OP_TAG,
     OP_COMMIT,
     OP_FLUSH,
@@ -277,6 +278,21 @@ typedef struct {
     void* contenido;
     uint32_t tamanio;
 } t_bloque_leido;
+
+/**
+ * @brief Estructura para el mensaje de lectura enviado al Master 
+ * @param id_query el ID de la query - uint32_t
+ * @param file_name el nombre del archivo - char*
+ * @param tag_name el nombre del tag - char*
+ * @param lectura el contenido leído - char*
+ * @note Enviado desde Worker -> Master -> Query Control (OP_READ)
+ */
+typedef struct {
+    uint32_t id_query;
+    char* file_name;
+    char* tag_name;
+    char* lectura;
+} t_msj_leido;
 
 /**
  * @brief Estructura para la solicitud de escritura de Storage

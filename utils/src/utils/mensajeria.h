@@ -473,5 +473,21 @@ t_buffer* serializar_solicitud_write(t_sol_write* solicitud);
  */
 t_sol_write* deserializar_solicitud_write(t_buffer* buffer);
 
+/**
+ * @brief Serializa un mensaje de lectura para el Master
+ * @param info_leida Puntero a t_msj_leido a serializar
+ * @return t_buffer* Buffer con la serialización
+ * @note Enviado desde Worker -> Master -> Query Control (OP_READ)
+ */
+t_buffer* serializar_lectura(t_msj_leido* info_leida);
+
+/**
+ * @brief Deserializa un mensaje de lectura para el Master
+ * @param buffer Puntero al t_buffer a deserializar
+ * @return t_msj_leido* Estructura t_msj_leido deserializada
+ * @note Recibido en Master -> Query Control (OP_READ)
+ */
+t_msj_leido* deserializar_lectura(t_buffer* buffer);
+
 #endif
  

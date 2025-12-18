@@ -40,16 +40,16 @@ int main(int argc, char* argv[]) {
 
         switch(paquete->codigo_operacion) {
             case OP_READ: // Mensaje leido/operacion READ (Worker -> Master & Master -> QC)
-                t_bloque_leido* bloque = deserializar_bloque_leido(paquete->datos);
-                
-                // TODO Convertir el contenido a string para imprimir (asumiendo que es texto)
-                // Procesar el bloque leído (por ejemplo, imprimir su contenido)
-                log_info(logger_qc, "## Lectura realizada: File %s:%s, contenido: %s",
-                         bloque->file_name, bloque->tag_name, bloque->contenido);
+                t_msj_leido* info_leida = deserializar_lectura(paquete->datos);
 
-                // TODO: Liberar bloque leído
-                free(bloque->file_name);
+                log_info(logger_qc, "## Lectura realizada: File %s:%s, contenido: %s",
+                         info_leida->file_name, info_leida->tag_name, info_leida->lectura);
+                
+                free(info_leida->file_name);
+                free(info_leida->tag_name);
+                free(info_leida->lectura);
                 break;
+                
             case OP_RESULTADO_QUERY: // Resultado de la Query
                 t_resultado_query* resultado = deserializar_resultado_query(paquete->datos);
                 if(resultado->estado >= 0) {

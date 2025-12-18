@@ -759,3 +759,26 @@ t_resultado_ejecucion* deserializar_cod_error(t_buffer* buffer) {
     *resultado = (t_resultado_ejecucion)buffer_read_uint32(buffer);
     return resultado;
 }
+
+t_buffer* serializar_lectura(t_msj_leido* info_leida) {
+    uint32_t size = sizeof(uint32_t) + // id_query
+                    sizeof(uint32_t) + strlen(info_leida->file_name) + 1 + // file_name
+                    sizeof(uint32_t) + strlen(info_leida->tag_name) + 1 + // tag_name
+                    sizeof(uint32_t) + strlen(info_leida->lectura); // lectura
+                   
+    t_buffer* buffer = crear_buffer(size);
+    buffer_add_uint32(buffer, info_leida->id_query);
+    buffer_add_string(buffer, strlen(info_leida->file_name) + 1, info_leida->file_name);
+    buffer_add_string(buffer, strlen(info_leida->tag_name) + 1, info_leida->tag_name);
+    buffer_add_string(buffer, strlen(info_leida->lectura), info_leida->lectura);
+    return buffer;
+}
+
+t_msj_leido* deserializar_lectura(t_buffer* buffer) {
+    t_msj_leido* info_leida = malloc(sizeof(t_msj_leido));
+    info_leida->id_query = buffer_read_uint32(buffer);
+    info_leida->file_name = buffer_read_string(buffer);
+    info_leida->tag_name = buffer_read_string(buffer);
+    info_leida->lectura = buffer_read_string(buffer);
+    return info_leida;
+}

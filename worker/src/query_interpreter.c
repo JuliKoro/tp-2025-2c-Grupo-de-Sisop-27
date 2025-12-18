@@ -365,8 +365,7 @@ t_resultado_ejecucion execute_read(char* file_name, char* tag_name, uint32_t dir
     }
     
     buffer[tamanio] = '\0'; // Null-terminator para strings
-    
-    log_debug(logger_worker, "Contenido leído: %s", buffer);
+
     if (!enviar_info_a_master(buffer, tamanio, file_name, tag_name)) {
         log_error(logger_worker, "Error al enviar contenido leído al Master");
         free(buffer);
@@ -533,6 +532,7 @@ t_resultado_ejecucion recibir_respuesta_storage() {
 }
 
 bool enviar_info_a_master(char* info, uint32_t size_info, char* file_name, char* tag_name) {
+    
     t_bloque_leido* bloque = malloc(sizeof(t_bloque_leido));
     bloque->id_query = id_query;
     bloque->file_name = file_name;
