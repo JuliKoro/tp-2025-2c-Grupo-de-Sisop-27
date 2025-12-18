@@ -68,10 +68,12 @@ void* atender_query_control(void* thread_args) {
     // Creamos la query y la ponemos en READY
     t_query* nuevaQuery = crearNuevaQuery(handshake->archivo_query, 
         handshake->prioridad, *conexion_query_control_ptr);
+    if(strcmp(master_config->algoritmo_planificacion, "PRIORIDADES") == 0){
+        pthread_t thread;
+        pthread_create(&thread, NULL, aging_de_query, (void*) nuevaQuery);
+        pthread_detach(thread);
+    }
     queryAReady(nuevaQuery);
-    pthread_t thread;
-    pthread_create(&thread, NULL, aging_de_query, (void*) nuevaQuery);
-    pthread_detach(thread);
     
     // Limpieza de recursos del handshake
     destruir_paquete(paquete_ptr);
