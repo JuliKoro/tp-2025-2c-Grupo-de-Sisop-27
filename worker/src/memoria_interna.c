@@ -291,9 +291,9 @@ t_resultado_ejecucion ejecutar_algoritmo_reemplazo(const char* file_nuevo, const
 
     entrada_tabla_paginas* victima = memoria_worker->tabla->entradas[indice_victima];
 
-    // Log obligatorio de reemplazo
-    log_info(logger_worker, "## Query <ID>: Se reemplaza la página <%s:%s>/<%d> por la <%s:%s>/<%d>",
-             victima->file_name, victima->tag_name, victima->numero_pagina,
+    // Log Obligatorio - Reemplazo Algoritmo
+    log_info(logger_worker, "## Query %d: Se reemplaza la página <%s:%s>/<%d> por la <%s:%s>/<%d>",
+             id_query, victima->file_name, victima->tag_name, victima->numero_pagina,
              file_nuevo, tag_nuevo, pag_nueva);
 
     // Si la víctima está modificada, hay que guardarla en Storage
@@ -316,9 +316,9 @@ t_resultado_ejecucion ejecutar_algoritmo_reemplazo(const char* file_nuevo, const
     victima->bit_uso = 0;
     victima->marco = -1; // No tiene marco asignado
 
-    // Log de liberación
-    log_info(logger_worker, "## Se libera el Marco: %d perteneciente al - File: %s - Tag: %s", 
-             marco_liberado, victima->file_name, victima->tag_name);
+    // Log Obligatorio - Liberación de Marco
+    log_info(logger_worker, "## Query %d: Se libera el Marco: %d perteneciente al - File: %s - Tag: %s", 
+             id_query, marco_liberado, victima->file_name, victima->tag_name);
 
     if (marco_asignado != NULL) {
         *marco_asignado = marco_liberado;
@@ -388,7 +388,7 @@ t_resultado_ejecucion manejar_page_fault(const char* file, const char* tag, uint
     log_warning(logger_worker, "## Query %d: PAGE FAULT - File: %s - Tag: %s - Página: %d", 
              id_query, file, tag, num_pagina);
 
-    // Log obligatorio de Bloque faltante en Memoria
+    // Log Obligatorio - Bloque faltante en Memoria
     log_info(logger_worker, "## Query %d: - Memoria Miss - File: %s - Tag: %s - Pagina: %d", id_query, file, tag, num_pagina);
     
     // Variable local para manejar el número de marco
@@ -405,6 +405,10 @@ t_resultado_ejecucion manejar_page_fault(const char* file, const char* tag, uint
             return res_reemplazo;
         }
     }
+
+    // Log obligatorio - Asignar Marco
+    log_info(logger_worker, "## Query %d: Se asigna el Marco: %d a la Página: %d perteneciente al - File: %s - Tag: %s", 
+             id_query, marco_asignado, num_pagina, file, tag);
     
     // Solicitar bloque a Storage
     if (!solicitar_bloque_storage(file, tag, num_pagina, memoria_worker->tam_pagina)) {
@@ -437,10 +441,7 @@ t_resultado_ejecucion manejar_page_fault(const char* file, const char* tag, uint
         entrada_existente->modificado = 0;
         entrada_existente->bit_uso = 1;
         entrada_existente->ultimo_acceso = time(NULL);
-
-        // Log obligatorio - Asignar Marco
-        log_info(logger_worker, "## Query %d: Se asigna el Marco: %d a la Página: %d perteneciente al - File: %s - Tag: %s", 
-                 id_query, marco_asignado, num_pagina, file, tag);
+        
     } else {
         // Es una página nueva, agregar entrada a la tabla
         agregar_entrada_tabla(file, tag, num_pagina, marco_asignado);
@@ -451,6 +452,10 @@ t_resultado_ejecucion manejar_page_fault(const char* file, const char* tag, uint
     
     // Asignamos el valor al puntero de salida
     if (marco != NULL) *marco = marco_asignado;
+
+    // Log Obligatorio - Bloque ingresado en Memoria
+    log_info(logger_worker, "## Query %d: - Memoria Add - File: %s - Tag: %s - Pagina: %d - Marco: %d", 
+             id_query, file, tag, num_pagina, marco_asignado);
     
     return EXEC_OK;
 }
@@ -630,7 +635,9 @@ t_resultado_ejecucion leer_memoria(const char* file, const char* tag, uint32_t d
         // Log obligatorio de lectura (por cada acceso a marco físico)
         char contenido_str[256];
         snprintf(contenido_str, sizeof(contenido_str), "%.*s", (int)bytes_a_leer, (char*)origen);
-        log_info(logger_worker, "Query %d: Acción: LEER - Dirección Física: %d - Valor: %s",
+
+        // Log Obligatorio - Lectura Memoria
+        log_info(logger_worker, "## Query %d: Acción: LEER - Dirección Física: %d - Valor: %s",
                     id_query, dir_fisica, contenido_str);
         
         // Aplicar retardo de memoria
@@ -700,6 +707,7 @@ t_resultado_ejecucion escribir_memoria(const char* file, const char* tag, uint32
         // Log obligatorio de escritura (por cada acceso a marco físico)
         char contenido_str[256];
         snprintf(contenido_str, sizeof(contenido_str), "%.*s", (int)bytes_a_escribir, (char*)contenido);
+        
         // Log Obligatorio - Escritura Memoria
         log_info(logger_worker, "## Query %d: Acción: ESCRIBIR - Dirección Física: %d - Valor: %s",
                     id_query, dir_fisica, contenido_str);

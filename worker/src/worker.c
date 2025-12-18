@@ -122,6 +122,7 @@ void* hilo_master(void* arg){
                 flag_desalojo_query = false;
                 pthread_mutex_unlock(&mutex_registros);
 
+                // Log Obligatorio - Recepción de Query
                 log_info(logger_worker, "## Query %d: Se recibe la Query. El path de operaciones es: %s", id_query, path_query);
 
                 // Señalizar que hay query lista

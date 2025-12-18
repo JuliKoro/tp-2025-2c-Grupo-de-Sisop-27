@@ -16,7 +16,7 @@ t_resultado_ejecucion query_interpreter() {
     char path_completo[512];
     snprintf(path_completo, sizeof(path_completo), "%s/%s", worker_configs->path_queries, path_query);
     
-    log_info(logger_worker, "## Query %d: Se recibe la Query. El path de operaciones es: %s", id_query, path_completo);
+    log_debug(logger_worker, "Path completo de operaciones es: %s", path_completo);
     
     // Abrir archivo de query
     FILE* archivo = abrir_archivo_query(path_completo);
@@ -31,6 +31,7 @@ t_resultado_ejecucion query_interpreter() {
     while (true) {
         // Verificar si se debe desalojar
         if (flag_desalojo_query) {
+            // Log Obligatorio - Desalojo de Query
             log_info(logger_worker, "## Query %d: Desalojada por pedido del Master", id_query);
             fclose(archivo);
             return EXEC_DESALOJO;
@@ -48,6 +49,7 @@ t_resultado_ejecucion query_interpreter() {
         t_instruccion* instruccion = parse_instruction(instruccion_str);
         free(instruccion_str);
 
+        // Log Obligatorio - Fetch Instrucción
         log_info(logger_worker, "## Query %d: FETCH - Program Counter: %d - %s", 
                  id_query, pc_actual, tipo_instruccion_to_string(instruccion->tipo));
         
@@ -60,7 +62,7 @@ t_resultado_ejecucion query_interpreter() {
         // EXECUTE: Ejecutar la instrucción
         t_resultado_ejecucion resultado = execute_instruction(instruccion); // Resulado de la ejecución de la instrucción
         
-        // Log obligatorio: Instrucción realizada
+        // Log obligatorio - Instrucción realizada
         if (resultado == EXEC_OK || resultado == EXEC_FIN_QUERY) {
             log_info(logger_worker, "## Query %d: - Instrucción realizada: %s", 
                      id_query, tipo_instruccion_to_string(instruccion->tipo));
