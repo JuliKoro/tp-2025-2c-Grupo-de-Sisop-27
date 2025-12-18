@@ -89,6 +89,8 @@ int main(int argc, char* argv[]) {
 
 void* hilo_master(void* arg){
 
+    t_asignacion_query* query_asignada = NULL;
+
     while (1)
     {
         // RECIBO PAQUETE DEL MASTER
@@ -110,7 +112,7 @@ void* hilo_master(void* arg){
                 sem_wait(&sem_query_terminada); // Esperar a que se libere la ejecución
 
                 // Procesar la asignación de la nueva Query (deserializacion)
-                t_asignacion_query* query_asignada = deserializar_asignacion_query(paquete_recibido->datos);
+                query_asignada = deserializar_asignacion_query(paquete_recibido->datos);
 
                 // Proteger acceso a registros
                 pthread_mutex_lock(&mutex_registros);
@@ -142,8 +144,6 @@ void* hilo_master(void* arg){
                     log_warning(logger_worker, "Se recibió desalojo pero no hay query en ejecución.");
                 }
                 pthread_mutex_unlock(&mutex_registros);
-
-                free(query_asignada);
 
                 break;
 
