@@ -129,6 +129,9 @@ void* atender_worker(void* thread_args) {
                     free(buffer_cod_error);
                 } else {
                     t_bloque_leido* bloque_leido = malloc(sizeof(t_bloque_leido));
+                    bloque_leido->id_query = read_instr->id_query;
+                    bloque_leido->file_name = read_instr->file_name;
+                    bloque_leido->tag_name = read_instr->tag_name;
                     bloque_leido->contenido = buffer_leido;
                     bloque_leido->tamanio = g_superblock_config->block_size;
 

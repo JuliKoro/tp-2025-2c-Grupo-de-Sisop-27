@@ -226,6 +226,7 @@ int leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLo
 
     if(stat(pathTag, &st) == -1) {
         log_error(g_logger_storage, "Error READ: El tag %s no existe para el archivo %s.", nombreTag, nombreFile);
+        status = ERROR_FILE_NO_EXISTE;
         goto cleanup;
 
     }
@@ -250,6 +251,7 @@ int leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLo
 
     if (*bufferSalida == NULL) {
         log_error(g_logger_storage, "Error READ: No se pudo leer el bloque físico %d para el bloque lógico %d en el tag %s del archivo %s.", bloqueFisico, bloqueLogico, nombreTag, nombreFile);
+        status = -1;
         goto cleanup;
     }
 
@@ -265,7 +267,6 @@ int leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLo
     free(pathFile);
     free(pathTag);
     free(pathMetadata);
-    
     return status;
     
 }
