@@ -34,6 +34,11 @@ typedef enum {
     OP_RESULTADO_QUERY, // Notificación de resultado de Query (Worker -> Master -> QC)
 } e_codigo_operacion;
 
+typedef enum {
+    FIFO,
+    PRIORIDADES
+} e_planificador;
+
 /**
 * @brief Estructura para el buffer
 * @param size el tamaño del buffer - uint32_t
