@@ -1,4 +1,6 @@
 #include "worker.h"
+#include <sys/types.h>
+#include <sys/socket.h>
 
 // DEFINICIÓN DE VARIABLES GLOBALES
 // Nota porque no entendía: Solo tienen que definirse en UN archivo .c (el main es el mejor lugar)
@@ -27,6 +29,8 @@ volatile bool flag_desalojo_query = false;
 
 // Nota: memoria_worker ya no se declara acá porque está en memoria_interna.c y se accede via el header memoria_interna.h
 
+
+
 int main(int argc, char* argv[]) {
     fprintf(stderr, "Worker ID: %s\n", argv[2]);
 
@@ -43,6 +47,7 @@ int main(int argc, char* argv[]) {
     inicializar_worker(nombre_config, argv[2]);
 
     // CONEXIONES
+    /* COMENTADO PARA TEST MANUAL SIN MASTER
     if (conexiones_worker() == EXIT_FAILURE) {
         fprintf(stderr, "Error en las conexiones del worker.\n");
         return EXIT_FAILURE;
@@ -60,6 +65,7 @@ int main(int argc, char* argv[]) {
 
     // Mostrar estado inicial para verificar
     mostrar_estado_memoria();
+    */
 
     // SEMAFOROS
     // Inicializar semáforos
@@ -68,6 +74,15 @@ int main(int argc, char* argv[]) {
     pthread_mutex_init(&mutex_registros, NULL);
     pthread_mutex_init(&mutex_memoria, NULL);
 
+    // --- TEST MANUAL DE INTEGRACIÓN CON STORAGE ---
+    // Descomentar la siguiente línea para ejecutar la prueba al iniciar:
+    // test_query_interpreter_con_storage("AGING_1");
+
+    // NUEVO TEST: INTEGRACIÓN STORAGE CONSOLA (Sin Master)
+    test_integracion_storage_consola("ESCRITURA_ARCHIVO_COMMITED"); // Cambia "AGING_1" por el script que quieras probar
+    
+    finalizar_worker();
+    return 0;
 
     // HILOS
     pthread_t thread_master, thread_query_interpreter;
@@ -262,4 +277,152 @@ void finalizar_worker(){
     if (worker_configs != NULL) {
         destruir_configs_worker(worker_configs);
     }
+}
+
+void test_query_interpreter_con_storage(char* test_path) {
+    log_info(logger_worker, "==== INICIO TEST MANUAL: QUERY INTERPRETER ====");
+
+    pthread_mutex_lock(&mutex_registros);
+    
+    // 1. Configuración manual de registros para simular una query asignada
+    id_query = 999; // ID de prueba
+    pc_actual = 0;
+    flag_query_activa = true;
+    flag_desalojo_query = false;
+
+    // 2. Hardcodeo del path de la query
+    // Este path se concatenará con worker_configs->path_queries en el interpreter.
+    // Asegúrate de que el archivo exista.
+    if (path_query) free(path_query);
+    path_query = strdup(test_path); 
+
+    pthread_mutex_unlock(&mutex_registros);
+
+    log_info(logger_worker, "Ejecutando Query de prueba: %s (ID: %d)", path_query, id_query);
+
+    // 3. Ejecutar lógica del interpreter directamente
+    t_resultado_ejecucion resultado = query_interpreter();
+
+    // 4. Verificar resultado
+    if (resultado == EXEC_FIN_QUERY) {
+        log_info(logger_worker, "==== TEST FINALIZADO: ÉXITO (EXEC_FIN_QUERY) ====");
+    } else {
+        log_error(logger_worker, "==== TEST FINALIZADO: FALLO O DESALOJO (Estado: %d) ====", resultado);
+    }
+
+    // 5. Limpieza post-test
+    pthread_mutex_lock(&mutex_registros);
+    desalojar_query();
+    pthread_mutex_unlock(&mutex_registros);
+}
+
+void test_integracion_storage_consola(char* nombre_archivo) {
+    log_info(logger_worker, "=== INICIO TEST INTEGRACION STORAGE (CONSOLA) ===");
+
+    // 1. Conexión manual a Storage
+    char puerto_storage[10];
+    sprintf(puerto_storage, "%d", worker_configs->puerto_storage);
+    
+    log_info(logger_worker, "Conectando a Storage en %s:%s...", worker_configs->ip_storage, puerto_storage);
+    conexion_storage = crear_conexion(worker_configs->ip_storage, puerto_storage);
+    
+    if (conexion_storage == -1) {
+        log_error(logger_worker, "Fallo conexión a Storage. Abortando test.");
+        return;
+    }
+
+    // Handshake Storage
+    t_tam_pagina* tam = handshake_worker_storage(conexion_storage, id_worker);
+    if (!tam) {
+        log_error(logger_worker, "Fallo handshake Storage. Abortando test.");
+        close(conexion_storage);
+        return;
+    }
+    worker_configs->tam_pagina = tam->tam_pagina;
+    free(tam);
+    log_info(logger_worker, "Storage conectado. Tamaño página: %d", worker_configs->tam_pagina);
+
+    // 2. Simular conexión a Master (para que no fallen los envíos en READ/FIN)
+    int sv[2];
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0) {
+        conexion_master = sv[0];
+        // El otro extremo (sv[1]) actuará como el Master recibiendo datos silenciosamente
+        log_info(logger_worker, "Conexión Master simulada (socketpair) para evitar errores de envío.");
+    } else {
+        log_warning(logger_worker, "No se pudo simular conexión Master. READ/FIN podrían fallar.");
+        sv[1] = -1;
+    }
+
+    // 3. Inicializar Memoria
+    memoria_worker = inicializar_memoria();
+    if (!memoria_worker) {
+        close(conexion_storage);
+        if (conexion_master != -1) close(conexion_master);
+        if (sv[1] != -1) close(sv[1]);
+        return;
+    }
+    mostrar_estado_memoria();
+
+    // 4. Configurar contexto de ejecución
+    pthread_mutex_lock(&mutex_registros);
+    id_query = 100; // ID Test
+    pc_actual = 0;
+    flag_query_activa = true;
+    flag_desalojo_query = false;
+    if (path_query) free(path_query);
+    path_query = strdup(nombre_archivo);
+    pthread_mutex_unlock(&mutex_registros);
+
+    // 5. Bucle de ejecución con prints por pantalla
+    char path_completo[512];
+    snprintf(path_completo, sizeof(path_completo), "%s/%s", worker_configs->path_queries, path_query);
+    
+    printf("\n>>> EJECUTANDO SCRIPT: %s <<<\n", path_completo);
+    
+    FILE* archivo = abrir_archivo_query(path_completo);
+    if (!archivo) {
+        log_error(logger_worker, "No se pudo abrir el archivo: %s", path_completo);
+    } else {
+        while (true) {
+            char* linea = fetch_instruction(archivo);
+            if (!linea) break;
+
+            t_instruccion* inst = parse_instruction(linea);
+            free(linea);
+            
+            if (!inst) break;
+
+            // Imprimir instrucción
+            printf("[PC %d] %-30s -> ", pc_actual, inst->instruccion_raw);
+            fflush(stdout);
+
+            // Ejecutar
+            t_resultado_ejecucion res = execute_instruction(inst);
+            
+            // Imprimir resultado
+            char* msg_res = obtener_mensaje_resultado(res);
+            printf("RETORNO: %d (%s)\n", res, msg_res);
+            free(msg_res);
+            
+            destruir_instruccion(inst);
+
+            if (res != EXEC_OK && res != EXEC_FIN_QUERY) {
+                printf(">>> ERROR DETECTADO. FIN DEL TEST.\n");
+                break;
+            }
+            if (res == EXEC_FIN_QUERY) {
+                printf(">>> FIN QUERY.\n");
+                break;
+            }
+            pc_actual++;
+        }
+        fclose(archivo);
+    }
+
+    // 6. Limpieza
+    printf("\n=== FIN TEST ===\n");
+    destruir_memoria();
+    close(conexion_storage);
+    if (conexion_master != -1) close(conexion_master);
+    if (sv[1] != -1) close(sv[1]);
 }

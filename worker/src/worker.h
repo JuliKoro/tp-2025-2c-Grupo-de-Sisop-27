@@ -97,4 +97,25 @@ void desalojar_query();
  */
 void finalizar_worker();
 
+/**
+ * @brief Función de prueba para ejecutar el Query Interpreter manualmente
+ * 
+ * Configura los registros necesarios (path, id, pc) hardcodeados y lanza
+ * la ejecución de una query para probar la integración con Storage
+ * sin necesidad de intervención del Master.
+ * 
+ * @param test_path Nombre del archivo de query a probar (ej: "AGING_1")
+ */
+void test_query_interpreter_con_storage(char* test_path);
+
+/**
+ * @brief Test de integración Worker-Storage con salida por consola
+ * 
+ * Conecta solo al Storage, simula al Master y ejecuta el script paso a paso,
+ * imprimiendo el resultado de cada instrucción por pantalla.
+ * 
+ * @param nombre_archivo Nombre del script a probar (ej: "SCRIPT_1")
+ */
+void test_integracion_storage_consola(char* nombre_archivo);
+
 #endif
