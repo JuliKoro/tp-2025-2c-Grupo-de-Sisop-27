@@ -3,6 +3,7 @@
 
 // Traemos variable externa para actualizar nivel de multiprogramación
 extern pthread_mutex_t mutexnivelMultiprocesamiento;
+//mechi liberar el mutex en finalizar master
 extern pthread_mutex_t mutexDesconexionQuery;
 bool desconexion_query = false;
 
