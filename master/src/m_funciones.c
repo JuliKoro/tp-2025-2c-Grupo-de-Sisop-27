@@ -19,6 +19,7 @@ pthread_mutex_t mutexIdentificadorQueryGlobal;
 pthread_mutex_t mutexNivelMultiprogramacion;
 // Mutex para workers
 pthread_mutex_t mutexListaWorkers;
+pthread_mutex_t mutexWorkerLibre;
 
 
 void inicializarListasYSemaforos() {
@@ -35,7 +36,8 @@ void inicializarListasYSemaforos() {
     pthread_mutex_init(&mutexNivelMultiprogramacion, NULL);
     // Init mutex workers
     pthread_mutex_init(&mutexListaWorkers, NULL);
-
+    //chequear que se aumente y disminuya al asignar y liberar worker
+    pthread_mutex_init(&mutexWorkerLibre, NULL);
     log_debug(logger_master, "Listas y semaforos de queries inicializados");
 }
 
@@ -57,11 +59,22 @@ t_query* crearNuevaQuery(char* archivoQuery, uint8_t prioridad, int socketQuery)
     return nuevaQuery;
 }
 
+int cantidadWorkersDisponibles(t_list* listaWorkers, t_list* listaQueriesReady){
+    int cantidadWorkersLibres = list_size(listaWorkers);
+    int cantidadQueriesReady = list_size(listaQueriesReady);
+    return cantidadWorkersLibres - cantidadQueriesReady;
+}
+
+
+
 void queryAReady(t_query* query){
     pthread_mutex_lock(&mutexListaQueriesReady);
     list_add(listaQueriesReady, query);
     pthread_mutex_unlock(&mutexListaQueriesReady);
     log_info(logger_master, "Query %d agregada a lista READY", query->id_query);
+    //mechi
+    //pthread_mutex_lock(&mutexListaWorkers);
+
 }
 
 void queryAExec(t_query* query){
@@ -202,7 +215,7 @@ t_query* obtener_siguiente_query_prioridades() {
     pthread_mutex_unlock(&mutexListaQueriesReady);
     return query;
 }
-
+//mechi no tendriamos que ver el punto config?
 void* iniciar_planificador(void* arg) {
     log_info(logger_master, "Planificador de Corto Plazo iniciado.");
 
@@ -218,9 +231,17 @@ void* iniciar_planificador(void* arg) {
             t_worker_interno* worker_elegido = obtener_worker_libre();
 
             if (worker_elegido != NULL) {
-                // 3. Obtener la siguiente query según algoritmo (Por ahora FIFO)
-                t_query* query_a_ejecutar = obtener_siguiente_query_fifo();
-                log_debug(logger_master, "query obtenida fifo");
+                t_query* query_a_ejecutar = NULL;
+                // 3. Obtener la siguiente query según algoritmo de planificación
+                if (strcmp( master_config->algoritmo_planificacion, "FIFO") == 0) {
+                    query_a_ejecutar = obtener_siguiente_query_fifo();
+                    log_debug(logger_master, "query obtenida fifo");
+                } else if (strcmp( master_config->algoritmo_planificacion, "PRIORIDADES") == 0) {
+                    query_a_ejecutar = obtener_siguiente_query_prioridades();
+                    log_debug(logger_master, "query obtenida prioridades");
+                } else {
+                    log_error(logger_master, "Algoritmo de planificación desconocido: %s", master_config->algoritmo_planificacion);
+                }
                 
                 if (query_a_ejecutar != NULL) {
                     log_info(logger_master, "Asignando Query %d al Worker %d", 
@@ -228,6 +249,7 @@ void* iniciar_planificador(void* arg) {
 
                     // 4. Mover Query a estado EXEC (Esto la saca de READY y la pone en EXEC)
                     actualizarEstadoQuery(query_a_ejecutar, Q_EXEC);
+                    
                     // 5. Marcar worker como OCUPADO
                     pthread_mutex_lock(&mutexListaWorkers);
                     worker_elegido->libre = false;

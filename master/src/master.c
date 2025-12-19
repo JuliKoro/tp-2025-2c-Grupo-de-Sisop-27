@@ -45,6 +45,8 @@ int main(int argc, char* argv[]) {
 
     log_info(logger_master, "Master iniciado correctamente. Esperando conexiones...");
 
+    
+    
     //Tests de manejo de listas
     /*log_debug(logger_master, "Duermo 10 segundos para que se conecte un QC y mande una query");
     sleep(10); 

@@ -74,7 +74,8 @@ void* atender_query_control(void* thread_args) {
         pthread_detach(thread);
     }
     queryAReady(nuevaQuery);
-    
+
+
     // Limpieza de recursos del handshake
     destruir_paquete(paquete_ptr);
     free(handshake->archivo_query);
