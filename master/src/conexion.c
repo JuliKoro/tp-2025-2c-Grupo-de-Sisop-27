@@ -23,6 +23,7 @@ void* iniciar_receptor(void* socket_servidor) {
         t_paquete* paquete = recibir_paquete(*fd_conexion_ptr);
         if(paquete == NULL){
             fprintf(stderr, "Error al recibir paquete inicial\n");
+            close(*fd_conexion_ptr); // IMPORTANTE: Cerrar socket si falla la recepción inicial
             free(fd_conexion_ptr);
             return NULL; // O continuar esperando otros clientes
         }
@@ -99,11 +100,9 @@ void* atender_query_control(void* thread_args) {
         destruir_paquete(paquete); 
     }
 
+    close(*conexion_query_control_ptr); // Cerrar el socket del sistema operativo
     free(conexion_query_control_ptr);
     free(thread_args_ptr);
-    // mechi (en realidad Ce pero bueno para encontarlo mas rapido)
-    // creo que aca iría lo de close(socket_cliente)
-    // close(conexion_query_control_ptr); tal vez??
 
     return NULL;
 }
@@ -215,6 +214,7 @@ void* atender_worker(void* thread_args) {
     // mechi TODO: Si el worker estaba ejecutando algo (nuevoWorker->libre == false) al momento de desconectarse,
     // deberías manejar el fallo de esa query aquí para no dejarla "colgada" en EXEC.
 
+    close(nuevoWorker->socket_fd); // Cerrar el socket del sistema operativo
     // Liberación de memoria
     free(nuevoWorker);
     free(conexion_worker_ptr); // Liberamos el puntero al FD creado en iniciar_receptor

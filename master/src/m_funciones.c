@@ -92,17 +92,10 @@ void finalizarMaster() {
     pthread_mutex_destroy(&mutexWorkerLibre);
     sem_destroy(&semPlanificador);
 
-    //mechi como destruyo fd?
-   // close(socket_servidor);
-   // close(socket_cliente);
-
     // 3. Liberar configuraciones
     if (master_config != NULL) {
         destruir_configs_master(master_config);
     }
-
-    // Limpieza de memoria al salir
-    // destruir_memoria(); Mech, esto es de worker, no de master, no nos sirve, destruye la memoria interna del worker
 
     // 4. Cierre de logger (Hacerlo al final para poder loguear lo anterior)
     // Cierre de logger
