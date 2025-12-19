@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
     // test_query_interpreter_con_storage("AGING_1");
 
     // NUEVO TEST: INTEGRACIÓN STORAGE CONSOLA (Sin Master)
-    test_integracion_storage_consola("ESCRITURA_ARCHIVO_COMMITED"); // Cambia "AGING_1" por el script que quieras probar
+    test_integracion_storage_consola("STORAGE_1"); // Cambia "AGING_1" por el script que quieras probar
     
     finalizar_worker();
     return 0;

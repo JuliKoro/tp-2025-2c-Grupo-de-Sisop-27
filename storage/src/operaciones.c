@@ -216,6 +216,7 @@ int leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLo
     char** bloquesLogicos = NULL;
     t_config* metadataConfig = NULL;
     int status = -1;
+    char* pathMetadata = NULL;
 
 
     if(stat(pathFile, &st) == -1) {
@@ -230,7 +231,7 @@ int leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLo
         goto cleanup;
 
     }
-    char* pathMetadata = string_from_format("%s/metadata.config", pathTag);
+    pathMetadata = string_from_format("%s/metadata.config", pathTag);
     lock_file_metadata(nombreFile);
     metadataConfig = config_create(pathMetadata);
     if (metadataConfig == NULL) {
@@ -257,7 +258,7 @@ int leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLo
 
     status = EXEC_OK;
     log_info(g_logger_storage, "##<%d> - Bloque Lógico Leído %s:%s - Número de Bloque: %d", query_id, nombreFile, nombreTag, bloqueLogico);
-    log_debug(g_logger_storage, "Data leida: %s", (char*)(*bufferSalida));
+    log_debug(g_logger_storage, "Data leida: %.10s", (char*)(*bufferSalida));
 
 
 

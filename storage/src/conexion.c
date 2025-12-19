@@ -126,8 +126,9 @@ void* atender_worker(void* thread_args) {
                     log_debug(g_logger_storage, "Error en operacion READ: %d, enviando a worker", resultado);
                     enviar_paquete(socket_cliente, paquete_cod_error);
 
-                    free(buffer_cod_error);
+                    //free(buffer_cod_error);
                 } else {
+                    log_debug(g_logger_storage, "Resultado operacion READ: %d, enviando a worker", resultado);
                     t_bloque_leido* bloque_leido = malloc(sizeof(t_bloque_leido));
                     bloque_leido->id_query = read_instr->id_query;
                     bloque_leido->file_name = read_instr->file_name;
