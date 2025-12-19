@@ -253,16 +253,17 @@ void* iniciar_planificador(void* arg) {
                     // 5. Marcar worker como OCUPADO
                     pthread_mutex_lock(&mutexListaWorkers);
                     worker_elegido->libre = false;
-                    log_debug(logger_master, "worker ocupado");
+                    worker_elegido->query = query_a_ejecutar;
                     pthread_mutex_unlock(&mutexListaWorkers);
-
+                    log_debug(logger_master, "worker ocupado");
+                    
                     // 6. Enviar la query al Worker (Serialización y Envío)
                     // Creamos la estructura que espera el worker (ver utils/estructuras.h)
                     t_asignacion_query* asignacion = malloc(sizeof(t_asignacion_query));
                     asignacion->id_query = query_a_ejecutar->id_query;
                     asignacion->path_query = strdup(query_a_ejecutar->archivoQuery);
                     asignacion->pc = 0; // Inicialmente PC es 0 (luego manejaremos desalojo)
-                    log_debug(logger_master, "Query encontrada en lista READY, removiendo");
+                    log_debug(logger_master, "Query quitada de ready");
 
                     t_paquete* paquete = malloc(sizeof(t_paquete));
                     paquete->codigo_operacion = OP_ASIGNAR_QUERY; // Necesitas definir este OpCode en utils
@@ -273,14 +274,13 @@ void* iniciar_planificador(void* arg) {
                     // Limpieza temporal
                     free(asignacion->path_query);
                     free(asignacion);
-                    // (paquete se libera dentro de enviar_paquete)
                 }
             } else {
                 // No hay workers libres, esperamos un poco
                 // log_trace(logger_master, "No hay workers libres. Esperando...");
             }
         }
-
+        
         // Evitar Busy Wait agresivo (Consumo 100% CPU)
         // Dormimos 100ms o 500ms
         usleep(500000); 
