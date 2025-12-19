@@ -426,7 +426,7 @@ void* aging_de_query(void* query){
         if(laQuery->estado == Q_READY) {
             if(laQuery->prioridad > 0) {
                 laQuery->prioridad--;
-
+                sem_post(&semPlanificador); // Avisar al planificador que hubo un cambio de prioridad
                 log_info(logger_master, "%d Cambio de prioridad: %d - %d", laQuery->id_query, laQuery->prioridad + 1, laQuery->prioridad);
             } else {
                 break;

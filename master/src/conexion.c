@@ -201,7 +201,25 @@ void* atender_worker(void* thread_args) {
         switch(paquete->codigo_operacion) {
             
             // CASO CLAVE: El worker terminó una tarea
-            case OP_RESULTADO_QUERY: // Asegúrate de tener este enum en estructuras.h
+            case OP_RESULTADO_QUERY:
+                t_fin_query* resultado = deserializar_resultado_query(paquete->datos); // Asegúrate de tener este enum en estructuras.h
+                switch (resultado->estado)
+                {
+                case EXEC_FIN_QUERY:
+
+                    break;
+                case EXEC_DESALOJO:
+
+                    /* code */
+                    break;
+                    //ERRORRRRRRR
+                case resultado->estado < 0:
+
+                    /* code */
+                    break;
+                default:
+                    break;
+                }
                 // TODO: Revisar finalizacion de la query (exito, error, desalojo, etc.)
                 //log_info(logger_master, "Worker %d finalizó una tarea con éxito.", nuevoWorker->id_worker);
                 
@@ -221,7 +239,12 @@ void* atender_worker(void* thread_args) {
                 break;
 
             // Aquí puedes agregar más casos (ej: OP_ERROR, logs intermedios, etc.)
-            
+            case OP_READ:
+                // Procesar mensaje de lectura si es necesario
+                log_debug(logger_master, "Worker %d envió un mensaje READ.", nuevoWorker->id_worker);
+                enviar_paquete(nuevoWorker->query->socketQuery, paquete)
+
+                break;
             default:
                 log_warning(logger_master, "Mensaje desconocido del Worker %d (OpCode: %d)", 
                             nuevoWorker->id_worker, paquete->codigo_operacion);
