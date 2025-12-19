@@ -12,6 +12,8 @@
  */
 void* iniciar_receptor(void* socket_servidor);
 
+extern bool desconexion_query;
+
 /**
  * @brief Atiende la conexion de un query control
  * @param thread_args
