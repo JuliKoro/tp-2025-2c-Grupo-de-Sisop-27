@@ -119,6 +119,8 @@ void* atender_query_control(void* thread_args) {
                         t_buffer* buffer_vacio = crear_buffer(0);
                         t_paquete* paquete_fin = empaquetar_buffer(OP_FIN_QUERY, buffer_vacio);
                         enviar_paquete(worker->socket_fd, paquete_fin);
+                        log_info(logger_master, "## Se desaloja la Query %d (%d) del Worker %d - Motivo: DESCONEXION", 
+                                 nuevaQuery->id_query, nuevaQuery->prioridad, worker->id_worker);
                         break;
                     }
                 }
@@ -210,8 +212,7 @@ void* atender_worker(void* thread_args) {
                     switch (resultado->estado) {
                         case EXEC_FIN_QUERY:
                         //mechi chequear si va log info o que
-                            log_info(logger_master, "## Se desaloja la Query %d (%d) del Worker %d - Motivo: DESCONEXION", 
-                                     nuevoWorker->query->id_query, nuevoWorker->query->prioridad, nuevoWorker->id_worker);
+                            
                             
                             // Notificar a QC
                             t_buffer* buffer_fin = serializar_resultado_query(resultado);
@@ -224,8 +225,6 @@ void* atender_worker(void* thread_args) {
 
                         case EXEC_DESALOJO:
                         //mechi chequear si va log info o que
-                            log_info(logger_master, "Se desaloja la Query %d (%d) del Worker %d - Motivo: <PRIORIDAD/desconexion>", 
-                                     worker_a_desalojar->query->id_query, worker_a_desalojar->query->prioridad, worker_a_desalojar->id_worker);
                             
                             actualizarEstadoQuery(nuevoWorker->query, Q_READY);                            
                             sem_post(&semPlanificador); // Avisar que hay query en ready
