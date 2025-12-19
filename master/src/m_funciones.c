@@ -16,7 +16,7 @@ pthread_mutex_t mutexListaQueriesReady;
 pthread_mutex_t mutexListaQueriesExec;
 pthread_mutex_t mutexListaQueriesExit;
 pthread_mutex_t mutexIdentificadorQueryGlobal;
-pthread_mutex_t mutexNivelMultiprogramacion;
+pthread_mutex_t mutexnivelMultiprocesamiento ;
 // Mutex para workers
 pthread_mutex_t mutexListaWorkers;
 pthread_mutex_t mutexWorkerLibre;
@@ -34,7 +34,7 @@ void inicializarListasYSemaforos() {
     pthread_mutex_init(&mutexListaQueriesExec, NULL);
     pthread_mutex_init(&mutexListaQueriesExit, NULL);
     pthread_mutex_init(&mutexIdentificadorQueryGlobal, NULL);
-    pthread_mutex_init(&mutexNivelMultiprogramacion, NULL);
+    pthread_mutex_init(&mutexnivelMultiprocesamiento , NULL);
     // Init mutex workers
     pthread_mutex_init(&mutexListaWorkers, NULL);
     //chequear que se aumente y disminuya al asignar y liberar worker
@@ -87,7 +87,7 @@ void finalizarMaster() {
     pthread_mutex_destroy(&mutexListaQueriesExec);
     pthread_mutex_destroy(&mutexListaQueriesExit);
     pthread_mutex_destroy(&mutexIdentificadorQueryGlobal);
-    pthread_mutex_destroy(&mutexNivelMultiprogramacion);
+    pthread_mutex_destroy(&mutexnivelMultiprocesamiento );
     pthread_mutex_destroy(&mutexListaWorkers);
     pthread_mutex_destroy(&mutexWorkerLibre);
     sem_destroy(&semPlanificador);
@@ -117,9 +117,10 @@ t_query* crearNuevaQuery(char* archivoQuery, uint8_t prioridad, int socketQuery)
     nuevaQuery->id_query = identificadorQueryGlobal++;
     pthread_mutex_unlock(&mutexIdentificadorQueryGlobal);
 
+    // Log Obligatorio - Conexión de Query Control
     log_info(logger_master, 
-        "## Se conecta un Query Control para ejecutar la Query %s con prioridad %d - Id asignado: %d. Nivel multiprogramación %d", 
-        nuevaQuery->archivoQuery, nuevaQuery->prioridad, nuevaQuery->id_query, nivelMultiprogramacion);
+        "## Se conecta un Query Control para ejecutar la Query %s con prioridad %d - Id asignado: %d. Nivel multiprocesamiento %d", 
+        nuevaQuery->archivoQuery, nuevaQuery->prioridad, nuevaQuery->id_query, nivelMultiprocesamiento );
 
     return nuevaQuery;
 }

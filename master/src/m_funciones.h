@@ -11,12 +11,16 @@
 #include <utils/mensajeria.h>
 #include <semaphore.h>
 
-
 // Variables globales
 extern t_log* logger_master;
 
 extern int identificadorQueryGlobal; //La inicilizamos en master.c, en 0
-extern int nivelMultiprogramacion; //La inicilizamos en master.c, en 0
+
+/**
+ * @brief: Nivel de multiprocesamiento actual (cantidad de workers conectados)
+ */
+extern int nivelMultiprocesamiento ; //La inicilizamos en master.c, en 0
+
 extern char const* estadosQuery[]; //La inicilizamos en m_funciones.c. Es para traducir los enum a string, para loggear.
 extern master_conf* master_config; //La inicilizamos en master.c, con la config del master
 
@@ -31,7 +35,7 @@ extern pthread_mutex_t mutexListaQueriesReady;
 extern pthread_mutex_t mutexListaQueriesExec;
 extern pthread_mutex_t mutexListaQueriesExit;
 extern pthread_mutex_t mutexIdentificadorQueryGlobal; 
-extern pthread_mutex_t mutexNivelMultiprogramacion;
+extern pthread_mutex_t mutexnivelMultiprocesamiento ;
 // Mutex para la lista de workers 
 extern pthread_mutex_t mutexListaWorkers;
 
@@ -46,6 +50,14 @@ typedef enum {
 
 
 // Estructura interna para representar una Query en el Master
+/**
+ * @brief: Estructura que representa una Query en el Master.
+ * @param id_query: Identificador único de la Query.
+ * @param prioridad: Prioridad de la Query (0 = más alta).
+ * @param archivoQuery: Path al archivo de la Query.
+ * @param estado: Estado actual de la Query (READY, EXEC, EXIT).
+ * @param socketQuery: Socket para comunicarse con el Query Control que envió la Query
+ */
 typedef struct{
     uint32_t id_query;
     uint8_t prioridad;

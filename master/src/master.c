@@ -6,7 +6,7 @@
 t_log* logger_master =NULL;
 master_conf* master_config = NULL;
 int identificadorQueryGlobal = 0;
-int nivelMultiprogramacion = 0;
+int nivelMultiprocesamiento  = 0;
 sem_t semPlanificador;
 
 int main(int argc, char* argv[]) {

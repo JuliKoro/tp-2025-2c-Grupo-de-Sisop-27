@@ -19,7 +19,7 @@ typedef enum {
     HANDSHAKE_WORKER_MASTER,
     OP_ASIGNAR_QUERY, // Asignación de nueva Query
     OP_DESALOJO_QUERY, // Solicitud de desalojo
-    OP_FIN_QUERY, // Notificación de fin de Query
+    OP_FIN_QUERY, // Notificación de fin de Query ("Desconexión de Query Control")
     OP_INST_OK, // Notificación de éxito
     OP_ERROR, // Notificación de error
     OP_CREATE,

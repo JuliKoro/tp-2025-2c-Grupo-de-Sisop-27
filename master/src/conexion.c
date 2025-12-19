@@ -2,7 +2,7 @@
 #include "m_funciones.h"
 
 // Traemos variable externa para actualizar nivel de multiprogramación
-extern pthread_mutex_t mutexNivelMultiprogramacion;
+extern pthread_mutex_t mutexnivelMultiprocesamiento;
 
 void* iniciar_receptor(void* socket_servidor) {
     int socket_servidor_ptr = *((int*) socket_servidor); // Casteo a int* y desreferencio
@@ -88,12 +88,30 @@ void* atender_query_control(void* thread_args) {
     while(1) {
         t_paquete* paquete = recibir_paquete(*conexion_query_control_ptr);
         if(paquete == NULL) {
-            log_info(logger_master, "## Se desconecta un Query Control. Finalizando Query %d (Prioridad %d).",
-                nuevaQuery->id_query, nuevaQuery->prioridad);
+
+            // Log Obligatorio - Desconexión de Query Control
+            log_info(logger_master, "## Se desconecta un Query Control. Se finaliza la Query %d con prioridad %d. Nivel multiprocesamiento %d",
+                nuevaQuery->id_query, nuevaQuery->prioridad, nivelMultiprocesamiento );
             
-            // mechi TODO: Lógica de cancelación de query si estaba corriendo
-            // actualizarEstadoQuery(nuevaQuery, Q_EXIT); 
-            
+            if (nuevaQuery->estado == Q_READY) {
+                actualizarEstadoQuery(nuevaQuery, Q_EXIT);
+            } else if (nuevaQuery->estado == Q_EXEC) {
+                // Notificar al Worker que debe cancelar la ejecución
+                pthread_mutex_lock(&mutexListaWorkers);
+                for (int i = 0; i < list_size(listaWorkers); i++) {
+                    t_worker_interno* worker = list_get(listaWorkers, i);
+                    if (worker->query != NULL && worker->query->id_query == nuevaQuery->id_query) {
+                        log_debug(logger_master, "Enviando solicitud de cancelación al Worker %d para Query %d", 
+                                 worker->id_worker, nuevaQuery->id_query);
+                        
+                        t_buffer* buffer_vacio = crear_buffer(0);
+                        t_paquete* paquete_fin = empaquetar_buffer(OP_FIN_QUERY, buffer_vacio);
+                        enviar_paquete(worker->socket_fd, paquete_fin);
+                        break;
+                    }
+                }
+                pthread_mutex_unlock(&mutexListaWorkers);
+            }
             break;
         }
         // Si el QC manda otros mensajes, procesarlos aquí
@@ -119,7 +137,7 @@ void* atender_worker(void* thread_args) {
 
     // 1. Deserializar handshake para obtener ID del Worker
     t_handshake_worker_master* handshake = deserializar_handshake_worker_master(paquete_ptr->datos);
-    log_info(logger_master, "Handshake recibido de Worker ID: %d", handshake->id_worker);
+    log_debug(logger_master, "Handshake recibido de Worker ID: %d", handshake->id_worker);
 
     // 2. Responder al handshake confirmando conexión
     enviar_string(*conexion_worker_ptr, "Master dice: Handshake OK");
@@ -134,15 +152,16 @@ void* atender_worker(void* thread_args) {
     list_add(listaWorkers, nuevoWorker);
     pthread_mutex_unlock(&mutexListaWorkers);
     
-    log_info(logger_master, "Worker ID %d agregado a la lista de gestión interna", nuevoWorker->id_worker);
+    log_debug(logger_master, "Worker ID %d agregado a la lista de gestión interna", nuevoWorker->id_worker);
 
     // 4. Actualizar métricas (nivel de multiprogramación)
-    pthread_mutex_lock(&mutexNivelMultiprogramacion);
-    nivelMultiprogramacion++;
-    pthread_mutex_unlock(&mutexNivelMultiprogramacion);
+    pthread_mutex_lock(&mutexnivelMultiprocesamiento );
+    nivelMultiprocesamiento ++;
+    pthread_mutex_unlock(&mutexnivelMultiprocesamiento );
     
+    // Log Obligatorio - Conexión de Worker
     log_info(logger_master, "## Se conecta el Worker %d. Cantidad total de Workers: %d", 
-        nuevoWorker->id_worker, nivelMultiprogramacion);
+        nuevoWorker->id_worker, nivelMultiprocesamiento );
 
     // Liberar memoria temporal del handshake
     destruir_paquete(paquete_ptr);
@@ -154,8 +173,16 @@ void* atender_worker(void* thread_args) {
         t_paquete* paquete = recibir_paquete(nuevoWorker->socket_fd);  
         
         if(paquete == NULL) {
-            // Caso de desconexión (recv devuelve 0 o error)
+            // TODO: Caso de desconexión (recv devuelve 0 o error) Revisar si realmente va aca o donde dice Mechi
+            /*
+            Al momento de que un Worker se desconecte, la Query que se encontraba en ejecución en 
+            dicho Worker se finalizará con error y se notificará al Query Control correspondiente.
+             */
             log_warning(logger_master, "Worker %d se ha desconectado.", nuevoWorker->id_worker);
+
+            // Log Obligatorio - Desconexión de Worker
+            log_info(logger_master, "## Se desconecta el Worker %d - Se finaliza la Query %d - Cantidad total de Workers: %d",
+                nuevoWorker->id_worker, nuevoWorker->query->id_query, nivelMultiprocesamiento);
             break;
         }
 
@@ -163,15 +190,19 @@ void* atender_worker(void* thread_args) {
             
             // CASO CLAVE: El worker terminó una tarea
             case OP_RESULTADO_QUERY: // Asegúrate de tener este enum en estructuras.h
-                log_info(logger_master, "Worker %d finalizó una tarea con éxito.", nuevoWorker->id_worker);
+                // TODO: Revisar finalizacion de la query (exito, error, desalojo, etc.)
+                //log_info(logger_master, "Worker %d finalizó una tarea con éxito.", nuevoWorker->id_worker);
                 
                 // Aquí podrías deserializar el resultado si el worker manda datos
                 // t_resultado* res = deserializar_resultado(paquete->datos);
                 
                 // CRÍTICO: Marcar al Worker como LIBRE nuevamente
                 pthread_mutex_lock(&mutexListaWorkers);
+                if (nuevoWorker->query != NULL) {
+                    actualizarEstadoQuery(nuevoWorker->query, Q_EXIT);
+                    nuevoWorker->query = NULL;
+                }
                 nuevoWorker->libre = true;
-                nuevoWorker->query = NULL;
                 pthread_mutex_unlock(&mutexListaWorkers);
                 sem_post(&semPlanificador); // Avisamos al planificador que hay un worker libre
                 log_debug(logger_master, "Worker %d marcado como LIBRE. Listo para próxima tarea.", nuevoWorker->id_worker);
@@ -204,12 +235,12 @@ void* atender_worker(void* thread_args) {
     pthread_mutex_unlock(&mutexListaWorkers);
 
     // Decrementar nivel de multiprogramación
-    pthread_mutex_lock(&mutexNivelMultiprogramacion);
-    nivelMultiprogramacion--;
-    pthread_mutex_unlock(&mutexNivelMultiprogramacion);
+    pthread_mutex_lock(&mutexnivelMultiprocesamiento );
+    nivelMultiprocesamiento --;
+    pthread_mutex_unlock(&mutexnivelMultiprocesamiento );
 
     log_info(logger_master, "## Se desconecta el Worker %d. Cantidad total de Workers: %d", 
-        nuevoWorker->id_worker, nivelMultiprogramacion);
+        nuevoWorker->id_worker, nivelMultiprocesamiento );
 
     // mechi TODO: Si el worker estaba ejecutando algo (nuevoWorker->libre == false) al momento de desconectarse,
     // deberías manejar el fallo de esa query aquí para no dejarla "colgada" en EXEC.
