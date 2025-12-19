@@ -39,7 +39,7 @@ int conexion_qc(char* nombre_qc, int prioridad) {
     if(conexion_master == -1){
         log_error(logger_qc, "Error al conectar con el master");
         log_warning(logger_qc, "Abortando Query Control");
-        return EXIT_FAILURE;
+        return -1;
     }
 
     // Log Obligatorio - Conexión al master
@@ -56,14 +56,14 @@ int conexion_qc(char* nombre_qc, int prioridad) {
         log_error(logger_qc, "Error al enviar el handshake al Master");
         log_warning(logger_qc, "Abortando Query Control");
         limpiarMemoria(handshake);
-        return EXIT_FAILURE;
+        return -1;
     }
 
     if(!confirmarRecepcion(conexion_master)) {
         log_error(logger_qc, "Error al confirmar el handshake con el Master");
         log_warning(logger_qc, "Abortando Query Control");
         limpiarMemoria(handshake);
-        return EXIT_FAILURE;
+        return -1;
     }
 
     // Log Obligatorio - Envío de Query

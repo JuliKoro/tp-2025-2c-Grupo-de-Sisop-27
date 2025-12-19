@@ -3,6 +3,8 @@
 t_log* logger_qc = NULL;
 query_control_conf* qc_configs = NULL;
 
+int conexion_master;
+
 int main(int argc, char* argv[]) {
 
     if(argc < 4){
@@ -22,8 +24,8 @@ int main(int argc, char* argv[]) {
     }
 
     // CONEXION CON MASTER
-    int conexion_master = conexion_qc(nombre_archivo_query, prioridad);
-    if(conexion_master == EXIT_FAILURE){
+    conexion_master = conexion_qc(nombre_archivo_query, prioridad);
+    if(conexion_master == -1){
         log_error(logger_qc, "Error al conectar con el Master");
         log_warning(logger_qc, "Abortando Query Control");
         return EXIT_FAILURE;
@@ -48,9 +50,10 @@ int main(int argc, char* argv[]) {
                 free(info_leida->file_name);
                 free(info_leida->tag_name);
                 free(info_leida->lectura);
+                free(info_leida);
                 break;
 
-            case OP_RESULTADO_QUERY: // Resultado de la Query
+            case OP_RESULTADO_QUERY: // Resultado de la Query Finalizada
                 t_fin_query* resultado_query = deserializar_resultado_query(paquete->datos);
                 
                 if (resultado_query->estado < 0) {
@@ -65,15 +68,21 @@ int main(int argc, char* argv[]) {
                 log_info(logger_qc, "## Query Finalizada - %s",
                          obtener_mensaje_resultado(resultado_query->estado));
                 free(resultado_query);
-                break;
+                
+                // Limpieza y finalización exitosa del proceso
+                destruir_paquete(paquete);
+                finalizar_qc();
+                return EXIT_SUCCESS;
 
             default:
                 log_warning(logger_qc, "Operación desconocida recibida del Master: %d", paquete->codigo_operacion);
                 break;
         }
+
         destruir_paquete(paquete);
     }
 
+    finalizar_qc();
     return 0;
 }
 
@@ -92,4 +101,10 @@ int inicializar_qc(char* nombre_config, char* archivo_query, int prioridad) {
     log_debug(logger_qc, "Iniciado Query Control para la query: %s con prioridad %d", archivo_query, prioridad);
 
     return 0;
+}
+
+void finalizar_qc() {
+    close(conexion_master);
+    log_destroy(logger_qc);
+    destruir_configs_query_control(qc_configs);
 }

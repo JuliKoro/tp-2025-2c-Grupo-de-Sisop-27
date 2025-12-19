@@ -25,4 +25,9 @@
  */
 int inicializar_qc(char* nombre_config, char* archivo_query, int prioridad);
 
+/**
+ * @brief Finaliza el módulo Query Control, liberando recursos
+ */
+void finalizar_qc();
+
 #endif /* QC_H_ */
