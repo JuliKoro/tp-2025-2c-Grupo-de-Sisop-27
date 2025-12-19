@@ -101,6 +101,10 @@ void* atender_query_control(void* thread_args) {
 
     free(conexion_query_control_ptr);
     free(thread_args_ptr);
+    // mechi (en realidad Ce pero bueno para encontarlo mas rapido)
+    // creo que aca iría lo de close(socket_cliente)
+    // close(conexion_query_control_ptr); tal vez??
+
     return NULL;
 }
 
