@@ -63,7 +63,6 @@ int main(int argc, char* argv[]) {
         // El main puede seguir ejecutando otras cosas aquí
         sleep(10000); // Simula que el main está haciendo otras tareas
     }
-    sem_destroy(&semPlanificador);
     
     return 0;
 }

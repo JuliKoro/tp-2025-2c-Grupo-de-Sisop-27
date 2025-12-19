@@ -20,8 +20,8 @@ pthread_mutex_t mutexNivelMultiprogramacion;
 // Mutex para workers
 pthread_mutex_t mutexListaWorkers;
 pthread_mutex_t mutexWorkerLibre;
-//mechi CHEQUEAR QUE SE DESTRUYEN TODOS LOS MUTEX Y MEMORIA AUXILIAR PEDIDA
 
+//mechi ultimos 2 logs?
 
 void inicializarListasYSemaforos() {
     listaQueriesReady = list_create();
@@ -40,6 +40,46 @@ void inicializarListasYSemaforos() {
     //chequear que se aumente y disminuya al asignar y liberar worker
     pthread_mutex_init(&mutexWorkerLibre, NULL);
     log_debug(logger_master, "Listas y semaforos de queries inicializados");
+}
+
+void finalizarMaster() {
+    log_debug(logger_master, "Finalizando Master");
+
+    //destroy listas
+    list_destroy_and_destroy_elements(listaQueriesReady, free);
+    list_destroy_and_destroy_elements(listaQueriesExec, free);
+    list_destroy_and_destroy_elements(listaQueriesExit, free);
+    list_destroy_and_destroy_elements(listaWorkers, free);
+
+    //destroy semaforos y mutex
+    pthread_mutex_destroy(&mutexListaQueriesReady);
+    pthread_mutex_destroy(&mutexListaQueriesExec);
+    pthread_mutex_destroy(&mutexListaQueriesExit);
+    pthread_mutex_destroy(&mutexIdentificadorQueryGlobal);
+    pthread_mutex_destroy(&mutexNivelMultiprogramacion);
+    pthread_mutex_destroy(&mutexListaWorkers);
+    pthread_mutex_destroy(&mutexWorkerLibre);
+    sem_destroy(&semPlanificador);
+
+    //mechi como destruyo fd?
+    close(socket_servidor);
+    close(socket_cliente);
+
+
+    // Limpieza de memoria al salir
+    destruir_memoria();
+
+    // Cierre de logger
+    log_warning(logger_master, "Logger cerrado.");
+    if (logger_master != NULL) {
+        log_destroy(logger_master);
+    }
+
+    // Liberar configuraciones
+    if (master_config != NULL) {
+        destruir_configs_master(master_config);
+    }
+
 }
 
 t_query* crearNuevaQuery(char* archivoQuery, uint8_t prioridad, int socketQuery) {
@@ -89,7 +129,9 @@ void queryAExit(t_query* query){
     pthread_mutex_lock(&mutexListaQueriesExit);
     list_add(listaQueriesExit, query);
     pthread_mutex_unlock(&mutexListaQueriesExit);
-    log_info(logger_master, "Query %d agregada a lista EXIT", query->id_query);
+    //mechi necesito el worker id pero no lo puedo conseguir aca, y veo que no hay ninguna funcion que 
+    //invoque a query exit
+    log_info(logger_master, "Se terminó la Query %d agregada a lista EXIT", query->id_query);
 }
 
 void actualizarEstadoQuery(t_query* query, e_estado_query nuevoEstado){
@@ -297,6 +339,8 @@ planif se despierta cuadno:
                     paquete->datos = serializar_asignacion_query(asignacion);
 
                     enviar_paquete(worker_elegido->socket_fd, paquete);
+                    log_info(logger_master, "Se envía la Query %d (%d) al Worker %d", 
+                             query_a_ejecutar->id_query, query_a_ejecutar->prioridad, worker_elegido->id_worker);
                     
                     // Limpieza temporal
                     free(asignacion->path_query);
@@ -330,6 +374,9 @@ planif se despierta cuadno:
 
                         if(worker_a_desalojar != NULL){
                             enviar_paquete(worker_a_desalojar->socket_fd, paquete_desalojo);
+                            //mechi como pongo el motivo de la desconexion?
+                            log_info(logger_master, "Se desaloja la Query %d (%d) del Worker %d - Motivo: ", 
+                                     worker_a_desalojar->query->id_query, worker_a_desalojar->query->prioridad, worker_a_desalojar->id_worker);
                         }
 
                     }
@@ -346,6 +393,8 @@ planif se despierta cuadno:
 }
 }
 void* aging_de_query(void* query){
+
+//mechi hacer sincro para que duerma este hilo cuando query esta en exec 
     t_query* laQuery = (t_query*) query;
 
     while(1) {
@@ -355,7 +404,7 @@ void* aging_de_query(void* query){
             if(laQuery->prioridad > 0) {
                 laQuery->prioridad--;
 
-                log_info(logger_master, "La prioridad ahora es de %d", laQuery->prioridad);
+                log_info(logger_master, "%d Cambio de prioridad: %d - %d", laQuery->id_query, laQuery->prioridad + 1, laQuery->prioridad);
             } else {
                 break;
             }

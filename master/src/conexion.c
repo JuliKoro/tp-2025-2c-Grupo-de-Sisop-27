@@ -59,6 +59,7 @@ void* atender_query_control(void* thread_args) {
     t_paquete* paquete_ptr = thread_args_ptr->paquete;
     int* conexion_query_control_ptr = thread_args_ptr->fd_conexion;
 
+
     t_handshake_qc_master* handshake = deserializar_handshake_qc_master(paquete_ptr->datos);
     log_info(logger_master, "Handshake recibido de Query Control. Archivo: %s, Prioridad: %d", 
         handshake->archivo_query, handshake->prioridad);
@@ -73,6 +74,7 @@ void* atender_query_control(void* thread_args) {
         pthread_create(&thread, NULL, aging_de_query, (void*) nuevaQuery);
         pthread_detach(thread);
     }
+
     queryAReady(nuevaQuery);
     sem_post(&semPlanificador); // Avisamos al planificador que hay una nueva query
     
@@ -88,7 +90,7 @@ void* atender_query_control(void* thread_args) {
             log_info(logger_master, "## Se desconecta un Query Control. Finalizando Query %d (Prioridad %d).",
                 nuevaQuery->id_query, nuevaQuery->prioridad);
             
-            // TODO: Lógica de cancelación de query si estaba corriendo
+            // mechi TODO: Lógica de cancelación de query si estaba corriendo
             // actualizarEstadoQuery(nuevaQuery, Q_EXIT); 
             
             break;
@@ -206,7 +208,7 @@ void* atender_worker(void* thread_args) {
     log_info(logger_master, "## Se desconecta el Worker %d. Cantidad total de Workers: %d", 
         nuevoWorker->id_worker, nivelMultiprogramacion);
 
-    // TODO: Si el worker estaba ejecutando algo (nuevoWorker->libre == false) al momento de desconectarse,
+    // mechi TODO: Si el worker estaba ejecutando algo (nuevoWorker->libre == false) al momento de desconectarse,
     // deberías manejar el fallo de esa query aquí para no dejarla "colgada" en EXEC.
 
     // Liberación de memoria
