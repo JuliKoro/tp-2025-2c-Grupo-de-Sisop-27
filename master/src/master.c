@@ -63,6 +63,13 @@ int main(int argc, char* argv[]) {
         // El main puede seguir ejecutando otras cosas aquí
         sleep(10000); // Simula que el main está haciendo otras tareas
     }
+
+    // --- CIERRE ORDENADO ---
+    // 1. Cerrar el socket principal (esto estaba dando error en m_funciones.c)
+    close(socket_servidor); 
+    
+    // 2. Llamar a la función de limpieza global
+    finalizarMaster();
     
     return 0;
 }

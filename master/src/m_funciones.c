@@ -42,15 +42,46 @@ void inicializarListasYSemaforos() {
     log_debug(logger_master, "Listas y semaforos de queries inicializados");
 }
 
+// --- FUNCIONES DE DESTRUCCIÓN DE ELEMENTOS ---
+
+void destruir_query(void* elemento) {
+    t_query* query = (t_query*) elemento;
+    if (query->archivoQuery != NULL) {
+        free(query->archivoQuery);
+    }
+    // Si hay un hilo de aging, deberías asegurarte de que termine antes de liberar
+    // pthread_cancel(query->thread_aging); // Opcional si se usan flags
+    free(query);
+}
+
+void destruir_worker_interno(void* elemento) {
+    t_worker_interno* worker = (t_worker_interno*) elemento;
+    // No cerramos el socket_fd aaca porque eso lo maneja el hilo atender_worker
+    // o se cierra al caerse la conexión.
+    free(worker);
+}
+
 void finalizarMaster() {
     log_debug(logger_master, "Finalizando Master");
 
     //destroy listas
-    list_destroy_and_destroy_elements(listaQueriesReady, free);
-    list_destroy_and_destroy_elements(listaQueriesExec, free);
-    list_destroy_and_destroy_elements(listaQueriesExit, free);
-    list_destroy_and_destroy_elements(listaWorkers, free);
+    //list_destroy_and_destroy_elements(listaQueriesReady, free);
+    //list_destroy_and_destroy_elements(listaQueriesExec, free);
+    //list_destroy_and_destroy_elements(listaQueriesExit, free);
+    //list_destroy_and_destroy_elements(listaWorkers, free);
+       
+    // 1. Destruir listas y sus elementos
+    // Usamos las funciones auxiliares para liberar la memoria interna de cada nodo
+    if (listaQueriesReady) 
+        list_destroy_and_destroy_elements(listaQueriesReady, destruir_query);
+    if (listaQueriesExec) 
+        list_destroy_and_destroy_elements(listaQueriesExec, destruir_query);
+    if (listaQueriesExit) 
+        list_destroy_and_destroy_elements(listaQueriesExit, destruir_query);
+    if (listaWorkers) 
+        list_destroy_and_destroy_elements(listaWorkers, destruir_worker_interno);
 
+    // 2. Destruir semáforos y mutex
     //destroy semaforos y mutex
     pthread_mutex_destroy(&mutexListaQueriesReady);
     pthread_mutex_destroy(&mutexListaQueriesExec);
@@ -62,22 +93,22 @@ void finalizarMaster() {
     sem_destroy(&semPlanificador);
 
     //mechi como destruyo fd?
-    close(socket_servidor);
-    close(socket_cliente);
+   // close(socket_servidor);
+   // close(socket_cliente);
 
+    // 3. Liberar configuraciones
+    if (master_config != NULL) {
+        destruir_configs_master(master_config);
+    }
 
     // Limpieza de memoria al salir
-    destruir_memoria();
+    // destruir_memoria(); Mech, esto es de worker, no de master, no nos sirve, destruye la memoria interna del worker
 
+    // 4. Cierre de logger (Hacerlo al final para poder loguear lo anterior)
     // Cierre de logger
     log_warning(logger_master, "Logger cerrado.");
     if (logger_master != NULL) {
         log_destroy(logger_master);
-    }
-
-    // Liberar configuraciones
-    if (master_config != NULL) {
-        destruir_configs_master(master_config);
     }
 
 }

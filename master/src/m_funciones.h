@@ -114,4 +114,6 @@ void* aging_de_query(void* query);
 
 // t_query* obtener_siguiente_query_prioridades(); // Para más adelante
 
+void finalizarMaster();
+
 #endif
