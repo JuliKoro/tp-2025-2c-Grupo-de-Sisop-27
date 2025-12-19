@@ -9,6 +9,7 @@
 #include <commons/collections/list.h>
 #include <utils/estructuras.h>
 #include <utils/mensajeria.h>
+#include <semaphore.h>
 
 
 // Variables globales
@@ -33,6 +34,8 @@ extern pthread_mutex_t mutexIdentificadorQueryGlobal;
 extern pthread_mutex_t mutexNivelMultiprogramacion;
 // Mutex para la lista de workers 
 extern pthread_mutex_t mutexListaWorkers;
+
+extern sem_t semPlanificador;
 
 // Definición de estados para las queries
 typedef enum {

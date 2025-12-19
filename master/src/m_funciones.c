@@ -20,6 +20,7 @@ pthread_mutex_t mutexNivelMultiprogramacion;
 // Mutex para workers
 pthread_mutex_t mutexListaWorkers;
 pthread_mutex_t mutexWorkerLibre;
+//mechi CHEQUEAR QUE SE DESTRUYEN TODOS LOS MUTEX Y MEMORIA AUXILIAR PEDIDA
 
 
 void inicializarListasYSemaforos() {
@@ -215,18 +216,44 @@ t_query* obtener_siguiente_query_prioridades() {
     pthread_mutex_unlock(&mutexListaQueriesReady);
     return query;
 }
+
+t_query* obtener_query_menos_prioritaria_ejecutandose() {
+    t_query* query = NULL;
+    pthread_mutex_lock(&mutexListaQueriesExec);
+    // BUSCO EL MENOR NUMERO DE PRIORIDAD
+    if (!list_is_empty(listaQueriesExec)) {
+        //mechi chequear aca el comparar prioridades por si hay que hacer otra func
+        query = list_get_maximum(listaQueriesExec, comparar_prioridades);
+    }
+    pthread_mutex_unlock(&mutexListaQueriesExec);
+    return query;
+}
+
+
 //mechi no tendriamos que ver el punto config?
 void* iniciar_planificador(void* arg) {
     log_info(logger_master, "Planificador de Corto Plazo iniciado.");
-
+/*
+planif se despierta cuadno:
+    - hay una nueva query en ready 
+    - hay un worker libre
+    - un worker se libera (termina una query)
+    - una query cambia de prioridad (aging)
+    - un worker se desconecta
+*/
     while (1) {
+        sem_wait(&semPlanificador);
         // 1. Verificar si hay queries pendientes en READY
         // (Usamos mutex para lectura segura, aunque obtener_siguiente lo hace también)
         pthread_mutex_lock(&mutexListaQueriesReady);
         bool hay_queries = !list_is_empty(listaQueriesReady);
         pthread_mutex_unlock(&mutexListaQueriesReady);
 
-        if (hay_queries) {
+        pthread_mutex_lock(&mutexListaWorkers);
+        bool hay_workers = !list_is_empty(listaWorkers);
+        pthread_mutex_unlock(&mutexListaWorkers);
+
+        if (hay_queries && hay_workers) {
             // 2. Verificar si hay Workers LIBRES
             t_worker_interno* worker_elegido = obtener_worker_libre();
 
@@ -276,8 +303,38 @@ void* iniciar_planificador(void* arg) {
                     free(asignacion);
                 }
             } else {
-                // No hay workers libres, esperamos un poco
-                // log_trace(logger_master, "No hay workers libres. Esperando...");
+                // caso de posible desalojo
+                if(strcmp( master_config->algoritmo_planificacion, "PRIORIDADES") == 0){
+                    t_query* query_a_ejecutar = obtener_siguiente_query_prioridades();
+                    t_query* query_menor_prioritaria = obtener_query_menos_prioritaria_ejecutandose();
+                    if(query_a_ejecutar->prioridad < query_menor_prioritaria->prioridad){
+                        log_info(logger_master, "Desalojando Query %d del Worker %d para asignar Query %d", 
+                             query_menor_prioritaria->id_query, worker_elegido->id_worker, query_a_ejecutar->id_query);
+                        
+                        // enviar mensaje de desalojo al worker
+                        t_paquete* paquete_desalojo = malloc(sizeof(t_paquete));
+                        paquete_desalojo->codigo_operacion = OP_DESALOJO_QUERY; // Necesitas definir este OpCode en utils
+                        paquete_desalojo->datos = NULL; // No necesitamos datos adicionales
+
+                        // Encontrar el worker que ejecuta la query menos prioritaria
+                        t_worker_interno* worker_a_desalojar = NULL;
+                        pthread_mutex_lock(&mutexListaWorkers);
+                        for (int i = 0; i < list_size(listaWorkers); i++) {
+                            t_worker_interno* worker = list_get(listaWorkers, i);
+                            if (worker->query != NULL && worker->query->id_query == query_menor_prioritaria->id_query) {
+                                worker_a_desalojar = worker;
+                                break; 
+                            }
+                        }
+                        pthread_mutex_unlock(&mutexListaWorkers);
+
+                        if(worker_a_desalojar != NULL){
+                            enviar_paquete(worker_a_desalojar->socket_fd, paquete_desalojo);
+                        }
+
+                    }
+
+                
             }
         }
         
@@ -287,7 +344,7 @@ void* iniciar_planificador(void* arg) {
     }
     return NULL;
 }
-
+}
 void* aging_de_query(void* query){
     t_query* laQuery = (t_query*) query;
 
@@ -297,6 +354,7 @@ void* aging_de_query(void* query){
         if(laQuery->estado == Q_READY) {
             if(laQuery->prioridad > 0) {
                 laQuery->prioridad--;
+
                 log_info(logger_master, "La prioridad ahora es de %d", laQuery->prioridad);
             } else {
                 break;

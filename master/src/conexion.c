@@ -74,6 +74,7 @@ void* atender_query_control(void* thread_args) {
         pthread_detach(thread);
     }
     queryAReady(nuevaQuery);
+    sem_post(&semPlanificador); // Avisamos al planificador que hay una nueva query
     
     // Limpieza de recursos del handshake
     destruir_paquete(paquete_ptr);
@@ -165,8 +166,9 @@ void* atender_worker(void* thread_args) {
                 // CRÍTICO: Marcar al Worker como LIBRE nuevamente
                 pthread_mutex_lock(&mutexListaWorkers);
                 nuevoWorker->libre = true;
+                nuevoWorker->query = NULL;
                 pthread_mutex_unlock(&mutexListaWorkers);
-                
+                sem_post(&semPlanificador); // Avisamos al planificador que hay un worker libre
                 log_debug(logger_master, "Worker %d marcado como LIBRE. Listo para próxima tarea.", nuevoWorker->id_worker);
                 break;
 

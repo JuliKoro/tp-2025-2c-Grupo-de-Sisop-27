@@ -7,6 +7,7 @@ t_log* logger_master =NULL;
 master_conf* master_config = NULL;
 int identificadorQueryGlobal = 0;
 int nivelMultiprogramacion = 0;
+sem_t semPlanificador;
 
 int main(int argc, char* argv[]) {
     //Arrancamos configs y logger
@@ -39,6 +40,7 @@ int main(int argc, char* argv[]) {
 
     //Hilo Planificador (Corto Plazo)
     pthread_t threadPlanificador;
+    sem_init(&semPlanificador, 0, 0); 
     pthread_create(&threadPlanificador, NULL, iniciar_planificador, NULL);
     // No hacemos detach si queremos esperar al final, pero como es un servicio continuo:
     pthread_detach(threadPlanificador);
@@ -61,7 +63,7 @@ int main(int argc, char* argv[]) {
         // El main puede seguir ejecutando otras cosas aquí
         sleep(10000); // Simula que el main está haciendo otras tareas
     }
-
+    sem_destroy(&semPlanificador);
     
     return 0;
 }
