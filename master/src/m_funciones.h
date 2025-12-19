@@ -64,7 +64,8 @@ typedef struct{
     char* archivoQuery;
     e_estado_query estado;
     int socketQuery; //socket para comunicarse con el query control que envio la query
-    //Quiza haga falta un semaforo para manejar el estado de la query
+    u_int32_t pc; //program counter para reanudar query desalojada
+    bool desconexion_solicitada; // Flag para indicar si se solicitó desconexión (QC desconectado)
 } t_query;
 
 

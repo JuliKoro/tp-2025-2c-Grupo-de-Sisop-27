@@ -3,9 +3,6 @@
 
 // Traemos variable externa para actualizar nivel de multiprogramación
 extern pthread_mutex_t mutexnivelMultiprocesamiento;
-//mechi liberar el mutex en finalizar master
-extern pthread_mutex_t mutexDesconexionQuery;
-bool desconexion_query = false;
 
 // HILO DE ATENCION DE CONEXIONES
 void* iniciar_receptor(void* socket_servidor) {
@@ -103,15 +100,14 @@ void* atender_query_control(void* thread_args) {
     while(1) {
         t_paquete* paquete = recibir_paquete(*conexion_query_control_ptr);
         if(paquete == NULL) {
-            desconexion_query = true;
             // Log Obligatorio - Desconexión de Query Control
             log_info(logger_master, "## Se desconecta un Query Control. Se finaliza la Query %d con prioridad %d. Nivel multiprocesamiento %d",
                 nuevaQuery->id_query, nuevaQuery->prioridad, nivelMultiprocesamiento );
             
             if (nuevaQuery->estado == Q_READY) {
                 actualizarEstadoQuery(nuevaQuery, Q_EXIT);
-                desconexion_query = false;
             } else if (nuevaQuery->estado == Q_EXEC) {
+                nuevaQuery->desconexion_solicitada = true; // Marcamos la query para que al volver del worker vaya a EXIT
                 // Notificar al Worker que debe cancelar la ejecución
                 pthread_mutex_lock(&mutexListaWorkers);
                 for (int i = 0; i < list_size(listaWorkers); i++) {
@@ -219,34 +215,40 @@ void* atender_worker(void* thread_args) {
                             log_debug(logger_master, "Worker %d informó finalización de Query %d", 
                                 nuevoWorker->id_worker, nuevoWorker->query->id_query);
                             
-                            // Notificar a QC
-                            t_buffer* buffer_fin = serializar_resultado_query(resultado);
-                            t_paquete* paquete_fin = empaquetar_buffer(OP_RESULTADO_QUERY, buffer_fin);
-                            enviar_paquete(nuevoWorker->query->socketQuery, paquete_fin);
-                                log_debug(logger_master, "Notificado a QC el fin de la Query %d", 
-                                    nuevoWorker->query->id_query);
+                            // Notificar a QC solo si sigue conectado
+                            if (!nuevoWorker->query->desconexion_solicitada) {
+                                t_buffer* buffer_fin = serializar_resultado_query(resultado);
+                                t_paquete* paquete_fin = empaquetar_buffer(OP_RESULTADO_QUERY, buffer_fin);
+                                enviar_paquete(nuevoWorker->query->socketQuery, paquete_fin);
+                                log_debug(logger_master, "Notificado a QC el fin de la Query %d", nuevoWorker->query->id_query);
+                            }
                             actualizarEstadoQuery(nuevoWorker->query, Q_EXIT);
 
                             
                             break;
 
                         case EXEC_DESALOJO:
-                        //mechi chequear si va log info o que
-                            if()
-                            log_debug(logger_master, "Worker %d informó desalojo de Query %d", 
-                                nuevoWorker->id_worker, nuevoWorker->query->id_query);
-                            actualizarEstadoQuery(nuevoWorker->query, Q_READY);                            
-                            sem_post(&semPlanificador); // Avisar que hay query en ready
+                            if (nuevoWorker->query->desconexion_solicitada) {
+                                log_info(logger_master, "Query %d desalojada por desconexión de QC. Enviando a EXIT.", nuevoWorker->query->id_query);
+                                actualizarEstadoQuery(nuevoWorker->query, Q_EXIT);
+                            } else {
+                                log_debug(logger_master, "Worker %d informó desalojo de Query %d (Preempción)", 
+                                    nuevoWorker->id_worker, nuevoWorker->query->id_query);
+                                actualizarEstadoQuery(nuevoWorker->query, Q_READY);                            
+                                sem_post(&semPlanificador); // Avisar que hay query en ready
+                            }
                             break;
 
                         default: // Errores
                             log_error(logger_master, "Query %d finalizada con error en Worker %d. Estado: %d", 
                                 nuevoWorker->query->id_query, nuevoWorker->id_worker, resultado->estado);
                             
-                            // Notificar a QC
-                            t_buffer* buffer_err = serializar_resultado_query(resultado);
-                            t_paquete* paquete_err = empaquetar_buffer(OP_RESULTADO_QUERY, buffer_err);
-                            enviar_paquete(nuevoWorker->query->socketQuery, paquete_err);
+                            // Notificar a QC solo si sigue conectado
+                            if (!nuevoWorker->query->desconexion_solicitada) {
+                                t_buffer* buffer_err = serializar_resultado_query(resultado);
+                                t_paquete* paquete_err = empaquetar_buffer(OP_RESULTADO_QUERY, buffer_err);
+                                enviar_paquete(nuevoWorker->query->socketQuery, paquete_err);
+                            }
 
                             actualizarEstadoQuery(nuevoWorker->query, Q_EXIT);
                             break;

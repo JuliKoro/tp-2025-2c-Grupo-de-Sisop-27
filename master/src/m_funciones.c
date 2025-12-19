@@ -112,6 +112,8 @@ t_query* crearNuevaQuery(char* archivoQuery, uint8_t prioridad, int socketQuery)
     nuevaQuery->prioridad = prioridad;
     nuevaQuery->estado = Q_READY;
     nuevaQuery->socketQuery = socketQuery;
+    nuevaQuery->pc = 0; // Inicializamos el Program Counter en 0
+    nuevaQuery->desconexion_solicitada = false;
 
     pthread_mutex_lock(&mutexIdentificadorQueryGlobal);
     nuevaQuery->id_query = identificadorQueryGlobal++;
@@ -352,7 +354,7 @@ planif se despierta cuadno:
                     t_asignacion_query* asignacion = malloc(sizeof(t_asignacion_query));
                     asignacion->id_query = query_a_ejecutar->id_query;
                     asignacion->path_query = strdup(query_a_ejecutar->archivoQuery);
-                    asignacion->pc = 0; // Inicialmente PC es 0 (luego manejaremos desalojo)
+                    asignacion->pc = query_a_ejecutar->pc; // Usamos el PC guardado (0 o el último ejecutado)
                     log_debug(logger_master, "Query quitada de ready");
 
                     t_paquete* paquete = malloc(sizeof(t_paquete));
@@ -373,8 +375,6 @@ planif se despierta cuadno:
                     t_query* query_a_ejecutar = obtener_siguiente_query_prioridades();
                     t_query* query_menor_prioritaria = obtener_query_menos_prioritaria_ejecutandose();
                     if(query_a_ejecutar->prioridad < query_menor_prioritaria->prioridad){
-                        log_info(logger_master, "## Se desaloja la Query %d (%d) del Worker %d - Motivo: PRIORIDAD", 
-                                 query_menor_prioritaria->id_query, query_menor_prioritaria->prioridad, worker->id_worker);
                         
                         // enviar mensaje de desalojo al worker
                         t_paquete* paquete_desalojo = malloc(sizeof(t_paquete));
@@ -397,9 +397,10 @@ planif se despierta cuadno:
                             enviar_paquete(worker_a_desalojar->socket_fd, paquete_desalojo);                            
                             }
 
-                        }
+                        log_info(logger_master, "## Se desaloja la Query %d (%d) del Worker %d - Motivo: PRIORIDAD", 
+                                 query_menor_prioritaria->id_query, query_menor_prioritaria->prioridad, worker_a_desalojar->id_worker);
 
-                
+                        }
                 }
             }
         
