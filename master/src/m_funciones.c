@@ -394,10 +394,7 @@ planif se despierta cuadno:
                         pthread_mutex_unlock(&mutexListaWorkers);
 
                         if(worker_a_desalojar != NULL){
-                            enviar_paquete(worker_a_desalojar->socket_fd, paquete_desalojo);
-                            //mechi como pongo el motivo de la desconexion?
-                            log_info(logger_master, "Se desaloja la Query %d (%d) del Worker %d - Motivo: ", 
-                                     worker_a_desalojar->query->id_query, worker_a_desalojar->query->prioridad, worker_a_desalojar->id_worker);
+                            enviar_paquete(worker_a_desalojar->socket_fd, paquete_desalojo);                            
                             }
 
                         }

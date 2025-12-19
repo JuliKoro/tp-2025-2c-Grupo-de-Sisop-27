@@ -203,35 +203,55 @@ void* atender_worker(void* thread_args) {
             // CASO CLAVE: El worker terminó una tarea
             case OP_RESULTADO_QUERY:
                 t_fin_query* resultado = deserializar_resultado_query(paquete->datos); // Asegúrate de tener este enum en estructuras.h
-                switch (resultado->estado)
-                {
-                case EXEC_FIN_QUERY:
-
-                    break;
-                case EXEC_DESALOJO:
-
-                    /* code */
-                    break;
-                    //ERRORRRRRRR
-                case resultado->estado < 0:
-
-                    /* code */
-                    break;
-                default:
-                    break;
-                }
-                // TODO: Revisar finalizacion de la query (exito, error, desalojo, etc.)
-                //log_info(logger_master, "Worker %d finalizó una tarea con éxito.", nuevoWorker->id_worker);
                 
-                // Aquí podrías deserializar el resultado si el worker manda datos
-                // t_resultado* res = deserializar_resultado(paquete->datos);
+                if (nuevoWorker->query != NULL) {
+                    nuevoWorker->query->pc = resultado->pc_final;
+
+                    switch (resultado->estado) {
+                        case EXEC_FIN_QUERY:
+                        //mechi chequear si va log info o que
+                            log_info(logger_master, "## Se desaloja la Query %d (%d) del Worker %d - Motivo: DESCONEXION", 
+                                     nuevoWorker->query->id_query, nuevoWorker->query->prioridad, nuevoWorker->id_worker);
+                            
+                            // Notificar a QC
+                            t_buffer* buffer_fin = serializar_resultado_query(resultado);
+                            t_paquete* paquete_fin = empaquetar_buffer(OP_RESULTADO_QUERY, buffer_fin);
+                            enviar_paquete(nuevoWorker->query->socketQuery, paquete_fin);
+
+                            actualizarEstadoQuery(nuevoWorker->query, Q_EXIT);
+                            
+                            break;
+
+                        case EXEC_DESALOJO:
+                        //mechi chequear si va log info o que
+                            log_info(logger_master, "Se desaloja la Query %d (%d) del Worker %d - Motivo: <PRIORIDAD/desconexion>", 
+                                     worker_a_desalojar->query->id_query, worker_a_desalojar->query->prioridad, worker_a_desalojar->id_worker);
+                            
+                            actualizarEstadoQuery(nuevoWorker->query, Q_READY);                            
+                            sem_post(&semPlanificador); // Avisar que hay query en ready
+                            break;
+
+                        default: // Errores
+                            log_error(logger_master, "Query %d finalizada con error en Worker %d. Estado: %d", 
+                                nuevoWorker->query->id_query, nuevoWorker->id_worker, resultado->estado);
+                            
+                            // Notificar a QC
+                            t_buffer* buffer_err = serializar_resultado_query(resultado);
+                            t_paquete* paquete_err = empaquetar_buffer(OP_RESULTADO_QUERY, buffer_err);
+                            enviar_paquete(nuevoWorker->query->socketQuery, paquete_err);
+
+                            actualizarEstadoQuery(nuevoWorker->query, Q_EXIT);
+                            break;
+                    }
+                } else {
+                    log_error(logger_master, "Recibido RESULTADO_QUERY de Worker %d sin query asignada", nuevoWorker->id_worker);
+                }
+                
+                free(resultado);
                 
                 // CRÍTICO: Marcar al Worker como LIBRE nuevamente
                 pthread_mutex_lock(&mutexListaWorkers);
-                if (nuevoWorker->query != NULL) {
-                    actualizarEstadoQuery(nuevoWorker->query, Q_EXIT);
-                    nuevoWorker->query = NULL;
-                }
+                nuevoWorker->query = NULL;
                 nuevoWorker->libre = true;
                 pthread_mutex_unlock(&mutexListaWorkers);
                 sem_post(&semPlanificador); // Avisamos al planificador que hay un worker libre
@@ -241,9 +261,11 @@ void* atender_worker(void* thread_args) {
             // Aquí puedes agregar más casos (ej: OP_ERROR, logs intermedios, etc.)
             case OP_READ:
                 // Procesar mensaje de lectura si es necesario
-                log_debug(logger_master, "Worker %d envió un mensaje READ.", nuevoWorker->id_worker);
-                enviar_paquete(nuevoWorker->query->socketQuery, paquete)
-
+                log_debug(logger_master, "Worker %d envió un mensaje READ. Reenviando a QC.", nuevoWorker->id_worker);
+                if (nuevoWorker->query != NULL) {
+                    enviar_paquete(nuevoWorker->query->socketQuery, paquete);
+                    paquete = NULL; // Evitar doble free
+                }
                 break;
             default:
                 log_warning(logger_master, "Mensaje desconocido del Worker %d (OpCode: %d)", 
