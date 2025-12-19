@@ -4,6 +4,7 @@
 // Traemos variable externa para actualizar nivel de multiprogramación
 extern pthread_mutex_t mutexnivelMultiprocesamiento;
 
+// HILO DE ATENCION DE CONEXIONES
 void* iniciar_receptor(void* socket_servidor) {
     int socket_servidor_ptr = *((int*) socket_servidor); // Casteo a int* y desreferencio
     log_debug(logger_master, "Socket casteado y desreferenciado: %d, procedo a escuchar conexiones", socket_servidor_ptr);
@@ -30,18 +31,21 @@ void* iniciar_receptor(void* socket_servidor) {
 
         switch(paquete->codigo_operacion) {
             t_thread_args* thread_args;
-            case HANDSHAKE_QC_MASTER:
+            case HANDSHAKE_QC_MASTER: // Conexión de Query Control
                 thread_args = malloc(sizeof(t_thread_args));
                 thread_args->paquete = paquete;
                 thread_args->fd_conexion = fd_conexion_ptr;
 
+                // HILO DE ATENCION A QUERY CONTROL
                 pthread_create(&thread, NULL, atender_query_control, (void*) thread_args);
                 pthread_detach(thread);
                 break;
-            case HANDSHAKE_WORKER_MASTER:
+            case HANDSHAKE_WORKER_MASTER: // Conexión de Worker
                 thread_args = malloc(sizeof(t_thread_args));
                 thread_args->paquete = paquete;
                 thread_args->fd_conexion = fd_conexion_ptr;
+
+                // HILO DE ATENCION A WORKER
                 pthread_create(&thread, NULL, atender_worker, (void*) thread_args);
                 pthread_detach(thread);
                 break;
@@ -55,14 +59,14 @@ void* iniciar_receptor(void* socket_servidor) {
     return NULL;
 }
 
+// HILO DE ATENCION A QUERY CONTROL
 void* atender_query_control(void* thread_args) {
     t_thread_args* thread_args_ptr = (t_thread_args*) thread_args;
     t_paquete* paquete_ptr = thread_args_ptr->paquete;
     int* conexion_query_control_ptr = thread_args_ptr->fd_conexion;
 
-
     t_handshake_qc_master* handshake = deserializar_handshake_qc_master(paquete_ptr->datos);
-    log_info(logger_master, "Handshake recibido de Query Control. Archivo: %s, Prioridad: %d", 
+    log_debug(logger_master, "Handshake recibido de Query Control. Archivo: %s, Prioridad: %d", 
         handshake->archivo_query, handshake->prioridad);
 
     enviar_string(*conexion_query_control_ptr, "Master dice: Handshake recibido");
@@ -70,8 +74,16 @@ void* atender_query_control(void* thread_args) {
     // Creamos la query y la ponemos en READY
     t_query* nuevaQuery = crearNuevaQuery(handshake->archivo_query, 
         handshake->prioridad, *conexion_query_control_ptr);
+
+    // Log Obligatorio - Conexión de Query Control
+    log_info(logger_master, 
+        "## Se conecta un Query Control para ejecutar la Query %s con prioridad %d - Id asignado: %d. Nivel multiprocesamiento %d", 
+        nuevaQuery->archivoQuery, nuevaQuery->prioridad, nuevaQuery->id_query, nivelMultiprocesamiento );
+
     if(strcmp(master_config->algoritmo_planificacion, "PRIORIDADES") == 0){
         pthread_t thread;
+
+        // HILO DE AGING PARA LA QUERY
         pthread_create(&thread, NULL, aging_de_query, (void*) nuevaQuery);
         pthread_detach(thread);
     }

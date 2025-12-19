@@ -117,11 +117,6 @@ t_query* crearNuevaQuery(char* archivoQuery, uint8_t prioridad, int socketQuery)
     nuevaQuery->id_query = identificadorQueryGlobal++;
     pthread_mutex_unlock(&mutexIdentificadorQueryGlobal);
 
-    // Log Obligatorio - Conexión de Query Control
-    log_info(logger_master, 
-        "## Se conecta un Query Control para ejecutar la Query %s con prioridad %d - Id asignado: %d. Nivel multiprocesamiento %d", 
-        nuevaQuery->archivoQuery, nuevaQuery->prioridad, nuevaQuery->id_query, nivelMultiprocesamiento );
-
     return nuevaQuery;
 }
 
@@ -298,6 +293,7 @@ t_query* obtener_query_menos_prioritaria_ejecutandose() {
 
 
 //mechi no tendriamos que ver el punto config?
+// HILO PLANIFICADOR (Corto Plazo)
 void* iniciar_planificador(void* arg) {
     log_info(logger_master, "Planificador de Corto Plazo iniciado.");
 /*
@@ -305,7 +301,7 @@ planif se despierta cuadno:
     - hay una nueva query en ready 
     - hay un worker libre
     - un worker se libera (termina una query)
-    - una query cambia de prioridad (aging)
+    - una query cambia de prioridad (aging) (NO SE SI ESTO ES NECESARIO)
     - un worker se desconecta
 */
     while (1) {
@@ -371,7 +367,7 @@ planif se despierta cuadno:
                     free(asignacion->path_query);
                     free(asignacion);
                 }
-            } else {
+            } else { // Caso: No hay workers libres
                 // caso de posible desalojo
                 if(strcmp( master_config->algoritmo_planificacion, "PRIORIDADES") == 0){
                     t_query* query_a_ejecutar = obtener_siguiente_query_prioridades();
@@ -402,28 +398,30 @@ planif se despierta cuadno:
                             //mechi como pongo el motivo de la desconexion?
                             log_info(logger_master, "Se desaloja la Query %d (%d) del Worker %d - Motivo: ", 
                                      worker_a_desalojar->query->id_query, worker_a_desalojar->query->prioridad, worker_a_desalojar->id_worker);
+                            }
+
                         }
 
-                    }
-
                 
+                }
             }
-        }
         
         // Evitar Busy Wait agresivo (Consumo 100% CPU)
         // Dormimos 100ms o 500ms
         usleep(500000); 
-    }
+        }
     return NULL;
+    }
 }
-}
+
+// HILO DE AGING PARA LA QUERY
 void* aging_de_query(void* query){
 
-//mechi hacer sincro para que duerma este hilo cuando query esta en exec 
+//mechi hacer sincro para que duerma este hilo cuando query esta en exec (consultar a Damian)
     t_query* laQuery = (t_query*) query;
 
     while(1) {
-        usleep(master_config->tiempo_aging *1000);
+        usleep(master_config->tiempo_aging * 1000);
         log_info(logger_master, "La prioridad es de %d", laQuery->prioridad);
         if(laQuery->estado == Q_READY) {
             if(laQuery->prioridad > 0) {

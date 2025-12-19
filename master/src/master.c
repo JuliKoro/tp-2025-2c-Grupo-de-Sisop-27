@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
     master_config = get_configs_master(nombre_config);    
     logger_master = iniciarLoggerMaster(master_config->log_level);
     
-    //Pasamos el puerto de int a char para levantar el server
+    // INICIO SERVIDOR
     char puerto_escucha[10];
     sprintf(puerto_escucha, "%d", master_config->puerto_escucha);
     int socket_servidor = iniciar_servidor(puerto_escucha);
@@ -33,12 +33,13 @@ int main(int argc, char* argv[]) {
     //iniciamos listas y semaforos
     inicializarListasYSemaforos();
 
+    // HILO DE ATENCION
     //Iniciamos la logica de recepcion en un hilo aparte, para poder probar cosas en main
     pthread_t threadReceptor;
     pthread_create(&threadReceptor, NULL, iniciar_receptor, &socket_servidor);
     pthread_detach(threadReceptor);
 
-    //Hilo Planificador (Corto Plazo)
+    // HILO PLANIFICADOR (Corto Plazo)
     pthread_t threadPlanificador;
     sem_init(&semPlanificador, 0, 0); 
     pthread_create(&threadPlanificador, NULL, iniciar_planificador, NULL);
