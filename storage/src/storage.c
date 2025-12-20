@@ -5,7 +5,6 @@
 #include "operaciones.h"
 #include <commons/string.h>
 
-
 t_log* g_logger_storage = NULL;
 
 storage_conf* g_storage_config = NULL;
@@ -13,8 +12,6 @@ storage_conf* g_storage_config = NULL;
 superblock_conf* g_superblock_config = NULL;
 
 int g_cantidadWorkers = 0;
-
-
 
 int main(int argc, char* argv[]) {
     saludar("storage");
@@ -32,8 +29,6 @@ int main(int argc, char* argv[]) {
     printf("PUERTO_ESCUCHA: %d\n", g_storage_config->puerto_escucha);
     printf("PUNTO_MONTAJE: %s\n", g_storage_config->punto_montaje);
     printf("LOG_LEVEL: %s\n", g_storage_config->log_level);
-
-    
 
     char puerto_escucha[10];
     sprintf(puerto_escucha, "%d", g_storage_config->puerto_escucha);
