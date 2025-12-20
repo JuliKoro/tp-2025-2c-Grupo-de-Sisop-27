@@ -176,6 +176,7 @@ void* atender_worker(void* thread_args) {
     // Log Obligatorio - Conexión de Worker
     log_info(logger_master, "## Se conecta el Worker %d. Cantidad total de Workers: %d", 
         nuevoWorker->id_worker, nivelMultiprocesamiento );
+    sem_post(&semPlanificador); // IMPORTANTE: Despertar al planificador porque hay un nuevo recurso disponible
 
     // Liberar memoria temporal del handshake
     destruir_paquete(paquete_ptr);
@@ -186,17 +187,31 @@ void* atender_worker(void* thread_args) {
     while(1) {
         t_paquete* paquete = recibir_paquete(nuevoWorker->socket_fd);  
         
-        if(paquete == NULL) {
-            // TODO: Caso de desconexión (recv devuelve 0 o error) Revisar si realmente va aca o donde dice Mechi
-            /*
-            Al momento de que un Worker se desconecte, la Query que se encontraba en ejecución en 
-            dicho Worker se finalizará con error y se notificará al Query Control correspondiente.
-             */
-            log_warning(logger_master, "Worker %d se ha desconectado.", nuevoWorker->id_worker);
+        if(paquete == NULL) { // Se desconecta el Worker
 
-            // Log Obligatorio - Desconexión de Worker
-            log_info(logger_master, "## Se desconecta el Worker %d - Se finaliza la Query %d - Cantidad total de Workers: %d",
-                nuevoWorker->id_worker, nuevoWorker->query->id_query, nivelMultiprocesamiento);
+            if (nuevoWorker->query != NULL) { // Había una query en ejecución
+                log_warning(logger_master, "Worker %d desconectado con Query %d en ejecución. Finalizando con error.", 
+                    nuevoWorker->id_worker, nuevoWorker->query->id_query);
+                
+                // Notificar a QC solo si sigue conectado
+                if (!nuevoWorker->query->desconexion_solicitada) { // QC sigue conectado
+                    t_fin_query resultado_error;
+                    resultado_error.id_query = nuevoWorker->query->id_query;
+                    resultado_error.estado = EXEC_ERROR;
+                    resultado_error.pc_final = nuevoWorker->query->pc;
+
+                    t_buffer* buffer_err = serializar_resultado_query(&resultado_error);
+                    t_paquete* paquete_err = empaquetar_buffer(OP_RESULTADO_QUERY, buffer_err);
+                    enviar_paquete(nuevoWorker->query->socketQuery, paquete_err);
+                }
+
+                // Log Obligatorio - Desconexión de Worker (Solo si tenía query, para evitar Crash)
+                log_info(logger_master, "## Se desconecta el Worker %d - Se finaliza la Query %d - Cantidad total de Workers: %d",
+                    nuevoWorker->id_worker, nuevoWorker->query->id_query, nivelMultiprocesamiento - 1);
+
+                actualizarEstadoQuery(nuevoWorker->query, Q_EXIT);
+            }
+
             break;
         }
 
