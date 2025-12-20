@@ -66,6 +66,7 @@ typedef struct{
     int socketQuery; //socket para comunicarse con el query control que envio la query
     u_int32_t pc; //program counter para reanudar query desalojada
     bool desconexion_solicitada; // Flag para indicar si se solicitó desconexión (QC desconectado)
+    pthread_mutex_t mutex_query; // Mutex para proteger el acceso a estado y prioridad
 } t_query;
 
 

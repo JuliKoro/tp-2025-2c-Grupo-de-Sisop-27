@@ -49,6 +49,7 @@ void destruir_query(void* elemento) {
     if (query->archivoQuery != NULL) {
         free(query->archivoQuery);
     }
+    pthread_mutex_destroy(&query->mutex_query);
     // Si hay un hilo de aging, deberías asegurarte de que termine antes de liberar
     // pthread_cancel(query->thread_aging); // Opcional si se usan flags
     free(query);
@@ -114,6 +115,7 @@ t_query* crearNuevaQuery(char* archivoQuery, uint8_t prioridad, int socketQuery)
     nuevaQuery->socketQuery = socketQuery;
     nuevaQuery->pc = 0; // Inicializamos el Program Counter en 0
     nuevaQuery->desconexion_solicitada = false;
+    pthread_mutex_init(&nuevaQuery->mutex_query, NULL);
 
     pthread_mutex_lock(&mutexIdentificadorQueryGlobal);
     nuevaQuery->id_query = identificadorQueryGlobal++;
@@ -157,10 +159,15 @@ void queryAExit(t_query* query){
 }
 
 void actualizarEstadoQuery(t_query* query, e_estado_query nuevoEstado){
+    // Bloqueamos la query para asegurar que su estado no cambie mientras la movemos
+    pthread_mutex_lock(&query->mutex_query);
+
     //Primero nos fijamos donde esta la query, y la sacamos
     t_query* queryEncontrada = NULL;
     log_debug(logger_master, "Actualizando estado de Query %d de %s a %s", query->id_query, estadosQuery[query->estado], estadosQuery[nuevoEstado]);
-    switch(query->estado){
+    
+    e_estado_query estado_anterior = query->estado;
+    switch(estado_anterior){
         case Q_READY:
             pthread_mutex_lock(&mutexListaQueriesReady);
             for(int i = 0; i < list_size(listaQueriesReady); i++) {
@@ -199,11 +206,14 @@ void actualizarEstadoQuery(t_query* query, e_estado_query nuevoEstado){
             break;
         default:
             log_error(logger_master, "Error: estado de query desconocido");
+            pthread_mutex_unlock(&query->mutex_query);
             return;
     }
 
     if(queryEncontrada == NULL) {
         log_error(logger_master, "Error: no se encontro la query en la lista correspondiente a su estado actual");
+        // Si no la encontramos, igual liberamos el lock de la query
+        pthread_mutex_unlock(&query->mutex_query);
         return;
     } else {
         //Una vez encontrada la query en la lista que correspondia, la pasamos a la lista del nuevo estado
@@ -222,10 +232,18 @@ void actualizarEstadoQuery(t_query* query, e_estado_query nuevoEstado){
                 break;
             default:
                 log_error(logger_master, "Error: nuevo estado de query invalido");
+                // Devolvemos la query a su lista original para no perderla
+                switch(estado_anterior) {
+                    case Q_READY: queryAReady(queryEncontrada); break;
+                    case Q_EXEC: queryAExec(queryEncontrada); break;
+                    case Q_EXIT: queryAExit(queryEncontrada); break;
+                }
+                pthread_mutex_unlock(&query->mutex_query);
                 return;
         }
 
     }
+    pthread_mutex_unlock(&query->mutex_query);
 }
 
 //-------------------FIFO-------------------
@@ -266,8 +284,17 @@ t_query* obtener_siguiente_query_fifo() {
 void* comparar_prioridades(void* query1, void* query2){
     t_query* queryA = (t_query*) query1;
     t_query* queryB = (t_query*) query2;
+    uint8_t pA, pB;
 
-    return queryA->prioridad <= queryB->prioridad ? queryA : queryB;
+    pthread_mutex_lock(&queryA->mutex_query);
+    pA = queryA->prioridad;
+    pthread_mutex_unlock(&queryA->mutex_query);
+
+    pthread_mutex_lock(&queryB->mutex_query);
+    pB = queryB->prioridad;
+    pthread_mutex_unlock(&queryB->mutex_query);
+
+    return pA <= pB ? queryA : queryB;
 }
 
 t_query* obtener_siguiente_query_prioridades() {
@@ -376,9 +403,20 @@ planif se despierta cuadno:
                     t_query* query_a_ejecutar = obtener_siguiente_query_prioridades();
                     t_query* query_menor_prioritaria = obtener_query_menos_prioritaria_ejecutandose();
 
+                    uint8_t p_ready = 255, p_exec = 0;
+                    if (query_a_ejecutar) {
+                        pthread_mutex_lock(&query_a_ejecutar->mutex_query);
+                        p_ready = query_a_ejecutar->prioridad;
+                        pthread_mutex_unlock(&query_a_ejecutar->mutex_query);
+                    }
+                    if (query_menor_prioritaria) {
+                        pthread_mutex_lock(&query_menor_prioritaria->mutex_query);
+                        p_exec = query_menor_prioritaria->prioridad;
+                        pthread_mutex_unlock(&query_menor_prioritaria->mutex_query);
+                    }
+
                     // VALIDACIÓN: Asegurarse de que hay queries para comparar y que la nueva tiene más prioridad
-                    if (query_a_ejecutar != NULL && query_menor_prioritaria != NULL &&
-                        query_a_ejecutar->prioridad < query_menor_prioritaria->prioridad) {
+                    if (query_a_ejecutar != NULL && query_menor_prioritaria != NULL && p_ready < p_exec) {
 
                             // Encontrar el worker que ejecuta la query menos prioritaria
                             t_worker_interno* worker_a_desalojar = NULL;
@@ -427,16 +465,26 @@ void* aging_de_query(void* query){
 
     while(1) {
         usleep(master_config->tiempo_aging * 1000);
-        log_info(logger_master, "La prioridad es de %d", laQuery->prioridad);
+
+        pthread_mutex_lock(&laQuery->mutex_query);
+        
+        // Solo aplicamos aging si la query está en READY
         if(laQuery->estado == Q_READY) {
             if(laQuery->prioridad > 0) {
+                uint8_t p_anterior = laQuery->prioridad;
                 laQuery->prioridad--;
+                uint8_t p_nueva = laQuery->prioridad;
+                pthread_mutex_unlock(&laQuery->mutex_query); // Desbloquear antes de sem_post
+
                 sem_post(&semPlanificador); // Avisar al planificador que hubo un cambio de prioridad
                 // Log Obligatorio - Cambio de prioridad de Query
-                log_info(logger_master, "##%d Cambio de prioridad: %d - %d", laQuery->id_query, laQuery->prioridad + 1, laQuery->prioridad);
+                log_info(logger_master, "##%d Cambio de prioridad: %d - %d", laQuery->id_query, p_anterior, p_nueva);
             } else {
+                pthread_mutex_unlock(&laQuery->mutex_query);
                 break;
             }
+        } else {
+            pthread_mutex_unlock(&laQuery->mutex_query);
         }
     }    
     return NULL;
