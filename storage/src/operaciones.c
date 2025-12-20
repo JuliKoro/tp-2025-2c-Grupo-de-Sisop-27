@@ -216,6 +216,7 @@ int leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLo
     char** bloquesLogicos = NULL;
     t_config* metadataConfig = NULL;
     int status = -1;
+    bool locked = false;
     char* pathMetadata = NULL;
 
 
@@ -233,10 +234,11 @@ int leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLo
     }
     pathMetadata = string_from_format("%s/metadata.config", pathTag);
     lock_file_metadata(nombreFile);
+    locked = true;
+
     metadataConfig = config_create(pathMetadata);
     if (metadataConfig == NULL) {
         log_error(g_logger_storage, "Error READ: No se pudo leer el metadata.config en %s.", pathTag);
-        unlock_file_metadata(nombreFile);
         goto cleanup;
     }
 
@@ -248,6 +250,8 @@ int leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLo
     }
     int bloqueFisico = atoi(bloquesLogicos[bloqueLogico]);
     unlock_file_metadata(nombreFile);
+    locked = false;
+
     *bufferSalida = leerBloqueFisico(bloqueFisico);
 
     if (*bufferSalida == NULL) {
@@ -274,6 +278,7 @@ int leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLo
     free(pathFile);
     free(pathTag);
     free(pathMetadata);
+    if (locked) unlock_file_metadata(nombreFile);
     return status;
     
 }
