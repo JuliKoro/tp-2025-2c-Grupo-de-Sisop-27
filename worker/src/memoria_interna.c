@@ -207,62 +207,66 @@ int encontrar_victima_clock_m(void) {
     int N = tabla->cantidad_entradas;
     if (N == 0) return -1; // No hay páginas
 
-    // PRIMERA PASADA: Buscar (use=0, modificado=0) 
-    // Damos hasta N vueltas para revisar todas las entradas
+    int p_inicio = tabla->puntero_clock;
+
+    // PASO 1: Buscar (U=0, M=0). No modificar bit U.
     for (int i = 0; i < N; i++) {
-        int indice_actual = tabla->puntero_clock;
-        entrada_tabla_paginas* entrada = tabla->entradas[indice_actual];
-
-        // Avanzar el puntero para la próxima vez
-        tabla->puntero_clock = (indice_actual + 1) % N;
-
-        // Solo consideramos páginas que estén en memoria
-        if (!entrada->presente) {
-            continue;
-        }
+        int idx = (p_inicio + i) % N;
+        entrada_tabla_paginas* entrada = tabla->entradas[idx];
+        
+        if (!entrada->presente) continue;
 
         if (entrada->bit_uso == 0 && entrada->modificado == 0) {
-            // ¡Víctima encontrada en (0,0)!
-            return indice_actual;
+            tabla->puntero_clock = (idx + 1) % N;
+            return idx;
+        }
+    }
+
+    // PASO 2: Buscar (U=0, M=1). Modificar U=1 -> U=0.
+    for (int i = 0; i < N; i++) {
+        int idx = (p_inicio + i) % N;
+        entrada_tabla_paginas* entrada = tabla->entradas[idx];
+        
+        if (!entrada->presente) continue;
+
+        if (entrada->bit_uso == 0 && entrada->modificado == 1) {
+            tabla->puntero_clock = (idx + 1) % N;
+            return idx;
         }
 
-        // Si no es (0,0), damos segunda oportunidad si use=1
         if (entrada->bit_uso == 1) {
             entrada->bit_uso = 0;
         }
     }
 
-    // SEGUNDA PASADA: Buscar (use=0, modificado=1) 
-    // Si llegamos aca, dimos una vuelta completa y todos los (1,X) son ahora (0,X)
-    // Volvemos a recorrer
+    // PASO 3: Buscar (U=0, M=0). (Repetir paso 1, pero ahora U puede ser 0 por el paso 2)
     for (int i = 0; i < N; i++) {
-        int indice_actual = tabla->puntero_clock;
-        entrada_tabla_paginas* entrada = tabla->entradas[indice_actual];
-
-        // Avanzar el puntero
-        tabla->puntero_clock = (indice_actual + 1) % N;
-
-        if (!entrada->presente) {
-            continue;
-        }
+        int idx = (p_inicio + i) % N;
+        entrada_tabla_paginas* entrada = tabla->entradas[idx];
+        
+        if (!entrada->presente) continue;
 
         if (entrada->bit_uso == 0 && entrada->modificado == 0) {
-            // Encontramos un (0,0) que antes era (1,0)
-            return indice_actual;
+            tabla->puntero_clock = (idx + 1) % N;
+            return idx;
         }
+    }
+
+    // PASO 4: Buscar (U=0, M=1). (Repetir paso 2)
+    for (int i = 0; i < N; i++) {
+        int idx = (p_inicio + i) % N;
+        entrada_tabla_paginas* entrada = tabla->entradas[idx];
+        
+        if (!entrada->presente) continue;
 
         if (entrada->bit_uso == 0 && entrada->modificado == 1) {
-            // Víctima encontrada en (0,1)
-            return indice_actual;
+            tabla->puntero_clock = (idx + 1) % N;
+            return idx;
         }
-
-        // Si era (1,1), en la pasada anterior se volvió (0,1)
-        // así que la condición anterior lo va a atrapar
-        // Si era (1,0), se volvió (0,0) y la primera condición lo atrapa
     }
     
-    // Esto teóricamente no debería pasar si hay páginas presentes, pero por las dudas, devolvemos la posición actual
-    return tabla->puntero_clock;
+    // Fallback (no debería llegar aquí si hay páginas presentes)
+    return p_inicio;
 }
 
 t_resultado_ejecucion ejecutar_algoritmo_reemplazo(const char* file_nuevo, const char* tag_nuevo, int pag_nueva, int* marco_asignado) {
