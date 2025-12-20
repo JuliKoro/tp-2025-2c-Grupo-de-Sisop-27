@@ -89,15 +89,15 @@ void* atender_worker(void* thread_args) {
                 break;
 
             case OP_COMMIT:
-                t_tag* commit_instr = deserializar_tag(paquete->datos);
-                log_info(g_logger_storage, "Operacion COMMIT recibida del Worker <%d> para el archivo <%s> con tag <%s>", id_worker, commit_instr->file_name_origen, commit_instr->tag_name_origen);
-                resultado = commitFile(commit_instr->id_query, commit_instr->file_name_origen, commit_instr->tag_name_origen);
+                t_commit* commit_instr = deserializar_commit(paquete->datos);
+                log_info(g_logger_storage, "Operacion COMMIT recibida del Worker <%d> para el archivo <%s> con tag <%s>", id_worker, commit_instr->file_name, commit_instr->tag_name);
+                resultado = commitFile(commit_instr->id_query, commit_instr->file_name, commit_instr->tag_name);
                 log_debug(g_logger_storage, "Resultado operacion COMMIT: %d, enviando a worker", resultado);    
 
                 enviar_entero(socket_cliente, resultado);
 
-                free(commit_instr->file_name_origen);
-                free(commit_instr->tag_name_origen);
+                free(commit_instr->file_name);
+                free(commit_instr->tag_name);
                 free(commit_instr);
                 break;
             case OP_DELETE:

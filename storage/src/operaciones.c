@@ -258,7 +258,13 @@ int leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLo
 
     status = EXEC_OK;
     log_info(g_logger_storage, "##<%d> - Bloque Lógico Leído %s:%s - Número de Bloque: %d", query_id, nombreFile, nombreTag, bloqueLogico);
-    log_debug(g_logger_storage, "Data leida: %.10s", (char*)(*bufferSalida));
+    
+    char* contenido_leido = (char*)(*bufferSalida);
+    if (contenido_leido[0] == '\0') {
+        log_debug(g_logger_storage, "Data leida: [Bloque Vacio/Ceros Binarios]");
+    } else {
+        log_debug(g_logger_storage, "Data leida: %.10s", contenido_leido);
+    }
 
 
 
@@ -595,6 +601,7 @@ int escribirBloque(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_
     simularRetardoOperacion(); 
     lock_file_metadata(nombreFile);
     log_info(g_logger_storage, "QUERY ID: %d Iniciando WRITE en %s:%s Bloque Lógico: %d", query_id, nombreFile, nombreTag, bloqueLogico);
+    log_debug(g_logger_storage, "Data a escribir: %.10s", (char*)datos);
 
     //Armo los paths
     char* pathFile = string_from_format("%s/files/%s", g_storage_config->punto_montaje, nombreFile);
