@@ -202,7 +202,11 @@ void* hilo_query_interpreter(void* arg){
             log_warning(logger_worker, "Query %d fue desalojada en PC: %d.", id_query, pc_actual);
         } 
         
-        resultado = flush_all(); // Asegurar que todo esté persistido al finalizar o desalojar
+        t_resultado_ejecucion resultado_flush = flush_all(); // Asegurar que todo esté persistido al finalizar o desalojar
+
+        if (resultado >= 0 && resultado_flush < 0) {
+            resultado = resultado_flush;
+        }
 
         if (!notificar_resultado_a_master(resultado)) {
             log_error(logger_worker, "Error al notificar resultado de la Query %d al Master", id_query);

@@ -157,20 +157,22 @@ void* atender_worker(void* thread_args) {
                 resultado = escribirBloque(write_instr->id_query, write_instr->file_name, write_instr->tag_name, write_instr->numero_bloque, write_instr->contenido);
                 log_debug(g_logger_storage, "Resultado operacion WRITE: %d", resultado);
                 enviar_entero(socket_cliente, resultado);
+                log_debug(g_logger_storage, "Respuesta enviada al Worker <%d> - Cod. %d", id_worker, resultado);
                 free(write_instr->file_name);
                 free(write_instr->tag_name);
                 free(write_instr->contenido);
                 free(write_instr);
-            break;
+                
+                break;
 
             default:
                 log_warning(g_logger_storage, "Operacion desconocida recibida del Worker <%d>", id_worker);
                 break;
-                destruir_paquete(paquete);
         
         
-    }
-    destruir_paquete(paquete);
+        }
+        log_debug(g_logger_storage, "Destruyendo paquete recibido del Worker %d", id_worker);
+        destruir_paquete(paquete);
     }
     log_debug(g_logger_storage, "Cerrando socket %d (Worker %d) para liberar recursos.", socket_cliente, id_worker);
     close(socket_cliente);

@@ -494,8 +494,10 @@ t_resultado_ejecucion recibir_bloque_storage(void* bloque) {
     if (paquete_recibido->codigo_operacion == OP_ERROR) {
         log_error(logger_worker, "Storage respondió con ERROR al solicitar bloque");
         t_resultado_ejecucion* cod_error = deserializar_cod_error(paquete_recibido->datos);
+        t_resultado_ejecucion resultado_final = *cod_error;
+        free(cod_error);
         destruir_paquete(paquete_recibido);
-        return *cod_error;
+        return resultado_final;
     }
 
     if (paquete_recibido->codigo_operacion != OP_READ) {

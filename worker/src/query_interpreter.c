@@ -60,7 +60,7 @@ t_resultado_ejecucion query_interpreter() {
         }
         
         // EXECUTE: Ejecutar la instrucción
-        t_resultado_ejecucion resultado = execute_instruction(instruccion); // Resulado de la ejecución de la instrucción
+        resultado = execute_instruction(instruccion); // Resulado de la ejecución de la instrucción
         
         // Log obligatorio - Instrucción realizada
         if (resultado == EXEC_OK || resultado == EXEC_FIN_QUERY) {
@@ -512,25 +512,25 @@ t_resultado_ejecucion recibir_respuesta_storage() {
 
     switch (respuesta) {
         case 0:
-            log_debug(logger_worker, "Operación realizada con éxito en Storage");
+            log_debug(logger_worker, "Operación realizada con éxito en Storage - Cod. %d", respuesta);
             return EXEC_OK;
         case -2:
-            log_error(logger_worker, "Error: El archivo no existe en Storage");
+            log_error(logger_worker, "Error: El archivo no existe en Storage - Cod. %d", respuesta);
             return ERROR_FILE_NO_EXISTE;
         case -3:
-            log_error(logger_worker, "Error: El archivo ya existe en Storage");
+            log_error(logger_worker, "Error: El archivo ya existe en Storage - Cod. %d", respuesta);
             return ERROR_YA_EXISTE;
         case -4:
-            log_error(logger_worker, "Error: Espacio insuficiente en Storage");
+            log_error(logger_worker, "Error: Espacio insuficiente en Storage - Cod. %d", respuesta);
             return ERROR_ESPACIO_INSUFICIENTE;
         case -5:
-            log_error(logger_worker, "Error: Escritura no permitida en Storage");
+            log_error(logger_worker, "Error: Escritura no permitida en Storage - Cod. %d", respuesta);
             return ERROR_ESCRITURA_NO_PERMITIDA;
         case -6:
-            log_error(logger_worker, "Error: Dirección fuera de límite en Storage");
+            log_error(logger_worker, "Error: Dirección fuera de límite en Storage - Cod. %d", respuesta);
             return ERROR_FUERA_DE_LIMITE;
         default:
-            log_error(logger_worker, "Error desconocido recibido del Storage");
+            log_error(logger_worker, "Error desconocido recibido del Storage - Cod. %d", respuesta);
             return EXEC_ERROR;
     }
 

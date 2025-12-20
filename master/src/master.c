@@ -1,4 +1,5 @@
 #include <utils/hello.h>
+#include <signal.h>
 #include <utils/mensajeria.h>
 #include "conexion.h"
 #include "m_funciones.h"
@@ -18,6 +19,9 @@ int main(int argc, char* argv[]) {
     }
 
     char* nombre_config = argv[1];
+
+    // Ignorar SIGPIPE para evitar que el Master muera si un cliente se desconecta al escribir
+    signal(SIGPIPE, SIG_IGN);
 
     master_config = get_configs_master(nombre_config);    
     logger_master = iniciarLoggerMaster(master_config->log_level);

@@ -52,7 +52,7 @@ int conexion_qc(char* nombre_qc, int prioridad) {
     t_paquete* paquete = generarPaquete(handshake);
 
     // Envio de Query
-    if(!enviar_paquete(conexion_master, paquete)) {
+    if(enviar_paquete(conexion_master, paquete) != 0) {
         log_error(logger_qc, "Error al enviar el handshake al Master");
         log_warning(logger_qc, "Abortando Query Control");
         limpiarMemoria(handshake);
