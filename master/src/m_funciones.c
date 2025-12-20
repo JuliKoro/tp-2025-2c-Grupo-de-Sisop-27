@@ -374,42 +374,48 @@ planif se despierta cuadno:
                 if(strcmp( master_config->algoritmo_planificacion, "PRIORIDADES") == 0){
                     t_query* query_a_ejecutar = obtener_siguiente_query_prioridades();
                     t_query* query_menor_prioritaria = obtener_query_menos_prioritaria_ejecutandose();
-                    if(query_a_ejecutar->prioridad < query_menor_prioritaria->prioridad){
-                        
-                        // enviar mensaje de desalojo al worker
-                        t_paquete* paquete_desalojo = malloc(sizeof(t_paquete));
-                        paquete_desalojo->codigo_operacion = OP_DESALOJO_QUERY; // Necesitas definir este OpCode en utils
-                        paquete_desalojo->datos = NULL; // No necesitamos datos adicionales
 
-                        // Encontrar el worker que ejecuta la query menos prioritaria
-                        t_worker_interno* worker_a_desalojar = NULL;
-                        pthread_mutex_lock(&mutexListaWorkers);
-                        for (int i = 0; i < list_size(listaWorkers); i++) {
-                            t_worker_interno* worker = list_get(listaWorkers, i);
-                            if (worker->query != NULL && worker->query->id_query == query_menor_prioritaria->id_query) {
-                                worker_a_desalojar = worker;
-                                break; 
+                    // VALIDACIÓN: Asegurarse de que hay queries para comparar y que la nueva tiene más prioridad
+                    if (query_a_ejecutar != NULL && query_menor_prioritaria != NULL &&
+                        query_a_ejecutar->prioridad < query_menor_prioritaria->prioridad) {
+
+                            // Encontrar el worker que ejecuta la query menos prioritaria
+                            t_worker_interno* worker_a_desalojar = NULL;
+                            pthread_mutex_lock(&mutexListaWorkers);
+                            for (int i = 0; i < list_size(listaWorkers); i++) {
+                                t_worker_interno* worker = list_get(listaWorkers, i);
+                                if (worker->query != NULL && worker->query->id_query == query_menor_prioritaria->id_query) {
+                                    worker_a_desalojar = worker;
+                                    break; 
+                                }
                             }
-                        }
-                        pthread_mutex_unlock(&mutexListaWorkers);
+                            pthread_mutex_unlock(&mutexListaWorkers);
 
-                        if(worker_a_desalojar != NULL){
-                            enviar_paquete(worker_a_desalojar->socket_fd, paquete_desalojo);                            
+                            if(worker_a_desalojar != NULL){
+                                // enviar mensaje de desalojo al worker
+                                // El buffer debe ser válido, aunque esté vacío.
+                                t_buffer* buffer_vacio = crear_buffer(0);
+                                t_paquete* paquete_desalojo = empaquetar_buffer(OP_DESALOJO_QUERY, buffer_vacio);
+
+                                enviar_paquete(worker_a_desalojar->socket_fd, paquete_desalojo);
+
+                                // Log obligatorio de desalojo por preempción
+                                log_info(logger_master, "## Se desaloja la Query %d (%d) del Worker %d - Motivo: PRIORIDAD", 
+                                        query_menor_prioritaria->id_query, query_menor_prioritaria->prioridad, worker_a_desalojar->id_worker);
+                            } else {
+                                // Este caso indica una inconsistencia en el estado del sistema.
+                                log_error(logger_master, "Inconsistencia: Se encontró query a desalojar (ID %d) pero no su worker.", 
+                                          query_menor_prioritaria->id_query);
                             }
-
-                        log_info(logger_master, "## Se desaloja la Query %d (%d) del Worker %d - Motivo: PRIORIDAD", 
-                                 query_menor_prioritaria->id_query, query_menor_prioritaria->prioridad, worker_a_desalojar->id_worker);
-
-                        }
+                    }
                 }
             }
-        
-        // Evitar Busy Wait agresivo (Consumo 100% CPU)
-        // Dormimos 100ms o 500ms
-        usleep(500000); 
         }
-    return NULL;
+        // Pequeña pausa para evitar un ciclo de CPU al 100% si el semáforo se postea
+        // de forma continua y errónea sin que haya trabajo real que hacer.
+        usleep(100000); // 100ms
     }
+    return NULL;
 }
 
 // HILO DE AGING PARA LA QUERY
