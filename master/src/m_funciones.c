@@ -362,7 +362,8 @@ planif se despierta cuadno:
                     paquete->datos = serializar_asignacion_query(asignacion);
 
                     enviar_paquete(worker_elegido->socket_fd, paquete);
-                    log_info(logger_master, "Se envía la Query %d (%d) al Worker %d", 
+                    // Log Obligatorio - Envío de Query a Worker
+                    log_info(logger_master, "## Se envía la Query %d (%d) al Worker %d", 
                              query_a_ejecutar->id_query, query_a_ejecutar->prioridad, worker_elegido->id_worker);
                     
                     // Limpieza temporal
@@ -399,7 +400,7 @@ planif se despierta cuadno:
 
                                 enviar_paquete(worker_a_desalojar->socket_fd, paquete_desalojo);
 
-                                // Log obligatorio de desalojo por preempción
+                                // Log Obligatorio - Desalojo de Query en Worker (PRIORIDAD)
                                 log_info(logger_master, "## Se desaloja la Query %d (%d) del Worker %d - Motivo: PRIORIDAD", 
                                         query_menor_prioritaria->id_query, query_menor_prioritaria->prioridad, worker_a_desalojar->id_worker);
                             } else {
@@ -431,7 +432,8 @@ void* aging_de_query(void* query){
             if(laQuery->prioridad > 0) {
                 laQuery->prioridad--;
                 sem_post(&semPlanificador); // Avisar al planificador que hubo un cambio de prioridad
-                log_info(logger_master, "%d Cambio de prioridad: %d - %d", laQuery->id_query, laQuery->prioridad + 1, laQuery->prioridad);
+                // Log Obligatorio - Cambio de prioridad de Query
+                log_info(logger_master, "##%d Cambio de prioridad: %d - %d", laQuery->id_query, laQuery->prioridad + 1, laQuery->prioridad);
             } else {
                 break;
             }

@@ -119,6 +119,7 @@ void* atender_query_control(void* thread_args) {
                         t_buffer* buffer_vacio = crear_buffer(0);
                         t_paquete* paquete_fin = empaquetar_buffer(OP_FIN_QUERY, buffer_vacio);
                         enviar_paquete(worker->socket_fd, paquete_fin);
+                        // Log Obligatorio - Desalojo de Query en Worker (DESCONEXION QC)
                         log_info(logger_master, "## Se desaloja la Query %d (%d) del Worker %d - Motivo: DESCONEXION", 
                                  nuevaQuery->id_query, nuevaQuery->prioridad, worker->id_worker);
                         break;
@@ -174,7 +175,7 @@ void* atender_worker(void* thread_args) {
     pthread_mutex_unlock(&mutexnivelMultiprocesamiento );
     
     // Log Obligatorio - Conexión de Worker
-    log_info(logger_master, "## Se conecta el Worker %d. Cantidad total de Workers: %d", 
+    log_info(logger_master, "## Se conecta el Worker %d - Cantidad total de Workers: %d", 
         nuevoWorker->id_worker, nivelMultiprocesamiento );
     sem_post(&semPlanificador); // IMPORTANTE: Despertar al planificador porque hay un nuevo recurso disponible
 
@@ -205,7 +206,7 @@ void* atender_worker(void* thread_args) {
                     enviar_paquete(nuevoWorker->query->socketQuery, paquete_err);
                 }
 
-                // Log Obligatorio - Desconexión de Worker (Solo si tenía query, para evitar Crash)
+                // Log Obligatorio - Desconexión de Worker (Solo si tenía query, para evitar q se rompa)
                 log_info(logger_master, "## Se desconecta el Worker %d - Se finaliza la Query %d - Cantidad total de Workers: %d",
                     nuevoWorker->id_worker, nuevoWorker->query->id_query, nivelMultiprocesamiento - 1);
 
@@ -230,6 +231,10 @@ void* atender_worker(void* thread_args) {
                             log_debug(logger_master, "Worker %d informó finalización de Query %d", 
                                 nuevoWorker->id_worker, nuevoWorker->query->id_query);
                             
+                            // Log Obligatorio - Finalización de Query en Worker
+                            log_info(logger_master, "## Se terminó la Query %d en el Worker %d",
+                                     nuevoWorker->query->id_query, nuevoWorker->id_worker);
+
                             // Notificar a QC solo si sigue conectado
                             if (!nuevoWorker->query->desconexion_solicitada) {
                                 t_buffer* buffer_fin = serializar_resultado_query(resultado);
@@ -258,6 +263,10 @@ void* atender_worker(void* thread_args) {
                             log_error(logger_master, "Query %d finalizada con error en Worker %d. Estado: %d", 
                                 nuevoWorker->query->id_query, nuevoWorker->id_worker, resultado->estado);
                             
+                            // Log Obligatorio - Finalización de Query en Worker
+                            log_info(logger_master, "## Se terminó la Query %d en el Worker %d",
+                                     nuevoWorker->query->id_query, nuevoWorker->id_worker);
+
                             // Notificar a QC solo si sigue conectado
                             if (!nuevoWorker->query->desconexion_solicitada) {
                                 t_buffer* buffer_err = serializar_resultado_query(resultado);
@@ -288,6 +297,9 @@ void* atender_worker(void* thread_args) {
                 // Procesar mensaje de lectura si es necesario
                 log_debug(logger_master, "Worker %d envió un mensaje READ. Reenviando a QC.", nuevoWorker->id_worker);
                 if (nuevoWorker->query != NULL) {
+                    // Log Obligatorio - Envío de lectura de Query a Query Control
+                    log_info(logger_master, "## Se envía un mensaje de lectura de la Query %d en el Worker %d al Query Control", 
+                             nuevoWorker->query->id_query, nuevoWorker->id_worker);
                     enviar_paquete(nuevoWorker->query->socketQuery, paquete);
                     paquete = NULL; // Evitar doble free
                 }
