@@ -34,6 +34,7 @@ void* atender_worker(void* thread_args) {
 
     
     while(1){
+        log_debug(g_logger_storage, "Esperando paquete del Worker %d", id_worker);
         t_paquete* paquete = recibir_paquete(socket_cliente);
 
         if(paquete == NULL){
@@ -89,15 +90,15 @@ void* atender_worker(void* thread_args) {
                 break;
 
             case OP_COMMIT:
-                t_tag* commit_instr = deserializar_tag(paquete->datos);
-                log_info(g_logger_storage, "Operacion COMMIT recibida del Worker <%d> para el archivo <%s> con tag <%s>", id_worker, commit_instr->file_name_origen, commit_instr->tag_name_origen);
-                resultado = commitFile(commit_instr->id_query, commit_instr->file_name_origen, commit_instr->tag_name_origen);
-                log_debug(g_logger_storage, "Resultado operacion COMMIT: %d, enviando a worker", resultado);    
+                t_commit* commit_instr = deserializar_commit(paquete->datos);
+                log_info(g_logger_storage, "Operacion COMMIT recibida del Worker <%d> para el archivo <%s> con tag <%s>", id_worker, commit_instr->file_name, commit_instr->tag_name);
+                resultado = commitFile(commit_instr->id_query, commit_instr->file_name, commit_instr->tag_name);
+                log_debug(g_logger_storage, "Resultado operacion COMMIT: %d, enviando a worker", resultado);
 
                 enviar_entero(socket_cliente, resultado);
 
-                free(commit_instr->file_name_origen);
-                free(commit_instr->tag_name_origen);
+                free(commit_instr->file_name);
+                free(commit_instr->tag_name);
                 free(commit_instr);
                 break;
             case OP_DELETE:
@@ -141,8 +142,8 @@ void* atender_worker(void* thread_args) {
                     t_paquete* paquete_bloque_leido = empaquetar_buffer(OP_READ, buffer_bloque_leido);
                     enviar_paquete(socket_cliente, paquete_bloque_leido);
 
-                    //free(bloque_leido);
-                    //free(buffer_bloque_leido);
+                    free(bloque_leido);
+                    free(buffer_leido);
                 }
                 
                 free(read_instr->file_name);
@@ -154,7 +155,20 @@ void* atender_worker(void* thread_args) {
                 //TODO
                 log_debug(g_logger_storage, "Operacion WRITE recibida del Worker <%d> - no hay respuesta hacia worker pero la ejecutamos", id_worker);
                 t_sol_write* write_instr = deserializar_solicitud_write(paquete->datos);
-                resultado = escribirBloque(write_instr->id_query, write_instr->file_name, write_instr->tag_name, write_instr->numero_bloque, write_instr->contenido);
+                
+                void* datos_a_escribir = write_instr->contenido;
+                void* buffer_padding = NULL;
+
+                if (write_instr->tamanio < g_superblock_config->block_size) {
+                    buffer_padding = calloc(1, g_superblock_config->block_size);
+                    memcpy(buffer_padding, write_instr->contenido, write_instr->tamanio);
+                    datos_a_escribir = buffer_padding;
+                }
+
+                resultado = escribirBloque(write_instr->id_query, write_instr->file_name, write_instr->tag_name, write_instr->numero_bloque, datos_a_escribir);
+                
+                if (buffer_padding) free(buffer_padding);
+
                 log_debug(g_logger_storage, "Resultado operacion WRITE: %d", resultado);
                 enviar_entero(socket_cliente, resultado);
                 log_debug(g_logger_storage, "Respuesta enviada al Worker <%d> - Cod. %d", id_worker, resultado);
@@ -172,7 +186,8 @@ void* atender_worker(void* thread_args) {
         
         }
         log_debug(g_logger_storage, "Destruyendo paquete recibido del Worker %d", id_worker);
-        destruir_paquete(paquete);
+        if (paquete != NULL) destruir_paquete(paquete);
+        log_debug(g_logger_storage, "Paquete destruido del Worker %d", id_worker);
     }
     log_debug(g_logger_storage, "Cerrando socket %d (Worker %d) para liberar recursos.", socket_cliente, id_worker);
     close(socket_cliente);

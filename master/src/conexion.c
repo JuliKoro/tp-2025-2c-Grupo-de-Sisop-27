@@ -216,6 +216,9 @@ void* atender_worker(void* thread_args) {
             break;
         }
 
+        log_info(logger_master, "Mensaje recibido del Worker %d (código operación: %d)", 
+            nuevoWorker->id_worker, paquete->codigo_operacion);
+
         switch(paquete->codigo_operacion) {
             
             // CASO CLAVE: El worker terminó una tarea
@@ -310,10 +313,7 @@ void* atender_worker(void* thread_args) {
                 break;
         }
         
-        log_info(logger_master, "Mensaje recibido del Worker %d (código operación: %d)", 
-            nuevoWorker->id_worker, paquete->codigo_operacion);
-
-        destruir_paquete(paquete);
+        if (paquete != NULL) destruir_paquete(paquete);
     }
 
     // 6. LIMPIEZA POST DESCONEXIÓN
