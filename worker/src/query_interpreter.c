@@ -282,6 +282,7 @@ t_resultado_ejecucion execute_create(char* file_name, char* tag_name) {
     log_debug(logger_worker, "Ejecutando CREATE %s:%s", file_name, tag_name);
 
     t_create* sol_create = malloc(sizeof(t_create));
+    sol_create->id_query = id_query;
     sol_create->file_name = file_name;
     sol_create->tag_name = tag_name;
 
@@ -304,6 +305,7 @@ t_resultado_ejecucion execute_truncate(char* file_name, char* tag_name, uint32_t
     log_debug(logger_worker, "Ejecutando TRUNCATE %s:%s %d", file_name, tag_name, tamanio);
     
     t_truncate* sol_truncate = malloc(sizeof(t_truncate));
+    sol_truncate->id_query = id_query;
     sol_truncate->file_name = file_name;
     sol_truncate->tag_name = tag_name;
     sol_truncate->size = tamanio;
@@ -387,6 +389,7 @@ t_resultado_ejecucion execute_tag(char* file_origen, char* tag_origen, char* fil
               file_origen, tag_origen, file_destino, tag_destino);
     
     t_tag* sol_tag = malloc(sizeof(t_tag));
+    sol_tag->id_query = id_query;
     sol_tag->file_name_origen = file_origen;
     sol_tag->tag_name_origen = tag_origen;
     sol_tag->file_name_destino = file_destino;
@@ -411,6 +414,7 @@ t_resultado_ejecucion execute_commit(char* file_name, char* tag_name) {
     log_debug(logger_worker, "Ejecutando COMMIT %s:%s", file_name, tag_name);
 
     t_commit* sol_commit = malloc(sizeof(t_commit));
+    sol_commit->id_query = id_query;
     sol_commit->file_name = file_name;
     sol_commit->tag_name = tag_name;
 
@@ -452,6 +456,7 @@ t_resultado_ejecucion execute_delete(char* file_name, char* tag_name) {
     log_debug(logger_worker, "Ejecutando DELETE %s:%s", file_name, tag_name);
     
     t_delete* sol_delete = malloc(sizeof(t_delete));
+    sol_delete->id_query = id_query;
     sol_delete->file_name = file_name;
     sol_delete->tag_name = tag_name;
 

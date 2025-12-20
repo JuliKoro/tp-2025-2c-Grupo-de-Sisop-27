@@ -249,6 +249,7 @@ typedef struct {
 
 /**
  * @brief Estructura para la solicitud de lectura de Storage
+ * @param id_query el ID de la query - uint32_t
  * @param file_name el nombre del archivo - char*
  * @param tag_name el nombre del tag - char*
  * @param numero_bloque el número de bloque a leer - uint32_t

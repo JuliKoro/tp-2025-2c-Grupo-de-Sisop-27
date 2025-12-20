@@ -462,6 +462,7 @@ t_resultado_ejecucion manejar_page_fault(const char* file, const char* tag, uint
 
 bool solicitar_bloque_storage(const char* file, const char* tag, uint32_t num_pagina, uint32_t tamanio) {
     t_sol_read* solicitud = malloc(sizeof(t_sol_read));
+    solicitud->id_query = id_query;
     solicitud->file_name = strdup(file);
     solicitud->tag_name = strdup(tag);
     solicitud->numero_bloque = num_pagina;
