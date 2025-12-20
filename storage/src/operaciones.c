@@ -85,7 +85,7 @@ int create(uint32_t query_id, char* nombreFile, char* nombreTag){
             goto cleanup; // Ir a la limpieza
         }
         log_debug(g_logger_storage, "Directorio %s creado exitosamente.", pathFile);
-        log_info(g_logger_storage,"##<QUERY_ID %d> - File Creado <%s>:<%s>", query_id, nombreFile, nombreTag);
+        log_info(g_logger_storage, "##%d - File Creado %s:%s", query_id, nombreFile, nombreTag);
     } else {
         log_info(g_logger_storage, "El archivo %s ya existe. Se procede a ver si existe el tag", pathFile);
     }
@@ -103,7 +103,7 @@ int create(uint32_t query_id, char* nombreFile, char* nombreTag){
             goto cleanup;
         }
         log_debug(g_logger_storage, "Tag %s creado exitosamente.", nombreTag);
-        log_info(g_logger_storage,"##<QUERY_ID %d> - Tag creado <%s>:<%s>", query_id, nombreFile, nombreTag);
+        log_info(g_logger_storage, "##%d - Tag creado %s:%s", query_id, nombreFile, nombreTag);
 
     }
 
@@ -185,7 +185,7 @@ int tag (uint32_t query_id,char* nombreFile, char* tagOrigen, char* tagDestino){
                 free(pathMetadataDestino);
                 status = 0;
                 log_debug(g_logger_storage, "Operación TAG exitosa de %s a %s para el archivo %s.", tagOrigen, tagDestino, nombreFile);
-                log_info(g_logger_storage, "QUERY ID %d > - Tag creado %s:%s", query_id, nombreFile, tagDestino);
+                log_info(g_logger_storage, "##%d - Tag creado %s:%s", query_id, nombreFile, tagDestino);
             }
         }
 
@@ -294,7 +294,7 @@ int leer(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t bloqueLo
         pthread_mutex_lock(&g_mutexBitmap);
         if (bitarray_test_bit(g_bitmap, numeroBloque)) {
             bitarray_clean_bit(g_bitmap, numeroBloque);
-            log_debug(g_logger_storage, "##<QUERY ID %d> Bloque físico %d liberado en bitmap (nlink=1).", query_id, numeroBloque);
+            log_info(g_logger_storage, "##%d - Bloque Físico Liberado - Número de Bloque: %d", query_id, numeroBloque);
         }
         pthread_mutex_unlock(&g_mutexBitmap);
     } else {
@@ -375,7 +375,7 @@ int eliminarTag(u_int32_t query_id, char* nombreFile, char* nombreTag){
 
     status = 0;
     //Log obligatorio: Tag Eliminado
-    log_info(g_logger_storage, "##<QUERY_ID %d> - Tag Eliminado <%s>:<%s>", query_id, nombreFile, nombreTag);
+    log_info(g_logger_storage, "##%d - Tag Eliminado %s:%s", query_id, nombreFile, nombreTag);
 
     cleanup:
     if (bloquesLogicos) string_array_destroy(bloquesLogicos);
@@ -499,7 +499,7 @@ int truncate_file(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t
             list_add(lista_bloques, nuevo_bloque);
             
             // Log obligatorio: Hard Link Agregado
-            log_info(g_logger_storage, "##<QUERY_ID %d> - Hard Link Agregado <File:Tag> %s:%s - Bloque Lógico %d ref a Bloque Físico 0", query_id, nombreFile, nombreTag, i);
+            log_info(g_logger_storage, "##%d - %s:%s Se agregó el hard link del bloque lógico %d al bloque físico 0", query_id, nombreFile, nombreTag, i);
         }
         free(path_fisico_0);
     } // ACHICAR 
@@ -519,7 +519,7 @@ int truncate_file(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t
             free(path_logico);
             
             // Log obligatorio: Hard Link Eliminado
-            log_info(g_logger_storage, "##<QUERY_ID %d> - Hard Link Eliminado <File:Tag> %s:%s - Bloque Lógico %d ref a Bloque Físico %d", query_id, nombreFile, nombreTag, i, bloque_fisico);
+            log_info(g_logger_storage, "##%d - %s:%s Se eliminó el hard link del bloque lógico %d al bloque físico %d", query_id, nombreFile, nombreTag, i, bloque_fisico);
 
             // 3. Verificar Bitmap
             liberarBloqueSiEsNecesario(query_id, bloque_fisico);
@@ -538,7 +538,7 @@ int truncate_file(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_t
     config_save(metadata);
     
     status = 0;
-    log_info(g_logger_storage, "##<QUERY_ID %d> - File Truncado %s:%s Nuevo Tamaño: %d", query_id, nombreFile, nombreTag, nuevoTamanio);
+    log_info(g_logger_storage, "##%d - File Truncado %s:%s - Tamaño: %d", query_id, nombreFile, nombreTag, nuevoTamanio);
 
     // Cleanup local
     free(blocks_formatted);
@@ -674,7 +674,7 @@ int escribirBloque(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_
         }
         
         // Log Obligatorio: Reservado
-        log_info(g_logger_storage, "##<QUERY_ID %d> - Bloque Físico Reservado %d", query_id, bloque_nuevo);
+        log_info(g_logger_storage, "##%d - Bloque Físico Reservado - Número de Bloque: %d", query_id, bloque_nuevo);
 
         // 4.2 Escribir en el nuevo bloque
         if (escribirFisicoDirecto(bloque_nuevo, datos, g_superblock_config->block_size) == -1) {
@@ -751,7 +751,7 @@ int escribirBloque(uint32_t query_id, char* nombreFile, char* nombreTag, uint32_
     }
 
     // 5. Log Obligatorio Final
-    log_info(g_logger_storage, "##<QUERY_ID %d> - Bloque Lógico Escrito <File:Tag> %s:%s - Número de Bloque: %d ", query_id, nombreFile, nombreTag, bloqueLogico);
+    log_info(g_logger_storage, "##%d - Bloque Lógico Escrito %s:%s - Número de Bloque: %d", query_id, nombreFile, nombreTag, bloqueLogico);
     status = 0;
 
     cleanup:
@@ -827,7 +827,7 @@ int commitFile(uint32_t query_id, char* nombreFile, char* nombreTag) {
 
     // 2. Cambiar estado a COMMITED
     config_set_value(metadata, "ESTADO", "COMMITED");
-    log_info(g_logger_storage, "##<QUERY_ID %d> - Commit de File: Tag %s:%s", query_id, nombreFile, nombreTag);
+    log_info(g_logger_storage, "##%d - Commit de File:Tag %s:%s", query_id, nombreFile, nombreTag);
 
     // 3. Ciclo de Deduplicación
     blocks_str = config_get_array_value(metadata, "BLOCKS");
@@ -874,7 +874,7 @@ int commitFile(uint32_t query_id, char* nombreFile, char* nombreTag) {
                 hubo_cambios = true;
 
                 // Log obligatorio
-                log_info(g_logger_storage, "##<QUERY_ID %d> - Deduplicación de Bloque <File:Tag> %s:%s - Bloque Lógico %d se reasigna de %d a %d", 
+                log_info(g_logger_storage, "##%d - %s:%s Bloque Lógico %d se reasigna de %d a %d", 
                          query_id, nombreFile, nombreTag, i, bloque_actual, bloque_original);
             }
 

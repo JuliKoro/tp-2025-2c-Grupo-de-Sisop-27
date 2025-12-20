@@ -29,8 +29,6 @@ volatile bool flag_desalojo_query = false;
 
 // Nota: memoria_worker ya no se declara acá porque está en memoria_interna.c y se accede via el header memoria_interna.h
 
-
-
 int main(int argc, char* argv[]) {
     fprintf(stderr, "Worker ID: %s\n", argv[2]);
 
@@ -47,7 +45,7 @@ int main(int argc, char* argv[]) {
     inicializar_worker(nombre_config, argv[2]);
 
     // CONEXIONES
-    /* COMENTADO PARA TEST MANUAL SIN MASTER
+    
     if (conexiones_worker() == EXIT_FAILURE) {
         fprintf(stderr, "Error en las conexiones del worker.\n");
         return EXIT_FAILURE;
@@ -65,7 +63,6 @@ int main(int argc, char* argv[]) {
 
     // Mostrar estado inicial para verificar
     mostrar_estado_memoria();
-    */
 
     // SEMAFOROS
     // Inicializar semáforos
@@ -79,10 +76,10 @@ int main(int argc, char* argv[]) {
     // test_query_interpreter_con_storage("AGING_1");
 
     // NUEVO TEST: INTEGRACIÓN STORAGE CONSOLA (Sin Master)
-    test_integracion_storage_consola("STORAGE_1"); // Cambia "AGING_1" por el script que quieras probar
+    //test_integracion_storage_consola("STORAGE_1"); // Cambia "AGING_1" por el script que quieras probar
     
-    finalizar_worker();
-    return 0;
+    //finalizar_worker();
+    //return 0;
 
     // HILOS
     pthread_t thread_master, thread_query_interpreter;

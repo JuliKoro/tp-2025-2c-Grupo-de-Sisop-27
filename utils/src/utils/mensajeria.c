@@ -370,11 +370,12 @@ void destruir_paquete(t_paquete *paquete){
 
 t_buffer* serializar_handshake_qc_master(t_handshake_qc_master *handshake){
     // Calculo el tamaño del buffer necesario. Tamaño del tamaño del string + tamaño del int + el string
-    uint32_t tamanio_buffer = sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + strlen(handshake->archivo_query);
+    uint32_t tamanio_buffer = sizeof(uint32_t) + // priority
+                              sizeof(uint32_t) + // length archivo_query
+                              strlen(handshake->archivo_query); // string
     //Creo el buffer
     t_buffer* buffer = crear_buffer(tamanio_buffer);
     //Agrego los datos
-    buffer_add_uint32(buffer, strlen(handshake->archivo_query)); // Ya lo agrega buffer_add_string
     buffer_add_uint32(buffer, handshake->prioridad);
     //Agrego el string
     buffer_add_string(buffer, strlen(handshake->archivo_query), handshake->archivo_query);
@@ -383,7 +384,6 @@ t_buffer* serializar_handshake_qc_master(t_handshake_qc_master *handshake){
 
 t_handshake_qc_master* deserializar_handshake_qc_master(t_buffer *buffer){
     t_handshake_qc_master* handshake = malloc(sizeof(*handshake));
-    buffer_read_uint32(buffer); //DUMMY FIELD?
     handshake->prioridad = buffer_read_uint32(buffer);
     handshake->archivo_query = buffer_read_string(buffer);
     return handshake;
