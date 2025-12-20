@@ -179,10 +179,6 @@ void agregar_entrada_tabla(const char* file, const char* tag, int num_pagina, in
 
     tabla->entradas[tabla->cantidad_entradas] = nueva;
     tabla->cantidad_entradas++;
-
-    // Log obligatorio - Asignar Marco
-    log_info(logger_worker, "## Query %d: Se asigna el Marco: %d a la Página: %d perteneciente al - File: %s - Tag: %s", 
-            id_query, marco, num_pagina, file, tag);
 }
 
 //------------ALGORITMOS DE REEMPLAZO------------
