@@ -7,6 +7,7 @@ El TP consistió en desarrollar una solución que permita la simulación de un s
 - [Enunciado TP](https://docs.google.com/document/d/1mEGwXjwtQzD0T6Pl8gEhgJcmQR_3nmVI6BxukAmumsM/edit?usp=sharing "Master of Files")
 - [Documento de pruebas Finales](https://docs.google.com/document/d/1ZK_5ZxZA0PYuC1uaomcghz3bCzollkjo-vx7t6Kb6qI/edit?usp=sharing "Master of Files")
 - [Repositorio de pruebas Finales](https://github.com/sisoputnfrba/master-of-files-pruebas.git)
+- [Diagramas de Flujos del Funcionamiento](https://drive.google.com/file/d/14DFoWj59B9auQH1jUXCTTKWWd4y3F4_C/view?usp=sharing)
 
 ## Despliegue
 
